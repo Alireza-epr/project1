@@ -9,7 +9,6 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "jest",
-    "test:components": "jest --config jest.config.js",
     "e2e": "playwright test",
     "lint": "eslint 'src/**/*.{ts,tsx,js,jsx}'",
     "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx,json,md}'",
@@ -24,6 +23,7 @@
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
@@ -35,6 +35,7 @@
     "jest": "^30.2.0",
     "playwright": "^1.56.1",
     "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.3",
     "vite": "^7.2.2"
