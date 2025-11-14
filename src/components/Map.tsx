@@ -10,6 +10,7 @@ const Map = () => {
 
     const enableROI = useMapStore( state => state.enableROI )
     const enableMarker = useMapStore( state => state.enableMarker )
+    const setROI = useMapStore( state => state.setROI)
 
     const mapContainer = useRef<HTMLDivElement>(null)
     const mapObject = useRef<MapLibre | null>(null)
@@ -65,6 +66,7 @@ const Map = () => {
 
         console.log("Draw polygon")
         console.log(polygonCoords.current)
+        setROI(polygonCoords.current)
         polygonCoords.current.push( polygonCoords.current[0] )
 
 
