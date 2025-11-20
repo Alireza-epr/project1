@@ -1,18 +1,15 @@
-
 .wrapper {
   width: 30%;
-  background-color: lightblue;
+  background-color: lightseagreen;
   position: relative;
   padding: 1.5vh;
 }
 
-.staticChart {
-  position: absolute;
-  padding: 16px;
-  width: 40vw;
-  height: 30vh;
-  background-color: lightgoldenrodyellow;
-  left: 100%;
-  top: 0;
-  z-index: 2;
+.buttonsWrapper {
+  background-color: lightcyan;
+  display: flex;
+  gap: 16px;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 16px ;
 }

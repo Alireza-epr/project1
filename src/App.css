@@ -14,7 +14,7 @@ body {
 .app-header {
   width: 100%;
   flex: 1 1 1px;
-  background-color: lightcyan;
+  display: flex;
 }
 
 .app-main {

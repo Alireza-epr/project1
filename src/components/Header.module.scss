@@ -1,0 +1,16 @@
+.wrapper{
+    width: 100%;
+    flex: 1 1 0px;
+    background-color: lightseagreen;
+    position: relative;
+    padding: 1.5vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.contentWrapper {
+    width: 100%;
+    flex: 1 1 0px;
+    background-color: lightcyan;
+    border-radius: 16px;
+}

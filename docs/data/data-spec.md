@@ -96,15 +96,6 @@ https://stac.dataspace.copernicus.eu/v1/search
         "op": "and",
         "args": [
             {
-                "op": "=",
-                "args": [
-                    {
-                        "property": "collection"
-                    },
-                    "sentinel-2-l2a"
-                ]
-            },
-            {
                 "op": "<=",
                 "args": [
                     {
