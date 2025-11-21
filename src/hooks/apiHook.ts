@@ -1,61 +1,12 @@
-import { ESTACURLS } from "@/types/apiTypes";
+import { ESTACURLS, ISTACFilterRequest, ISTACFilterResponse } from "@/types/apiTypes";
 import { useEffect, useState } from "react";
 
-const postBody = {
-  collections: ["sentinel-2-l2a"],
-  filter: {
-    op: "and",
-    args: [
-      {
-        op: "<=",
-        args: [
-          {
-            property: "eo:cloud_cover",
-          },
-          10,
-        ],
-      },
-      {
-        op: ">=",
-        args: [
-          {
-            property: "datetime",
-          },
-          {
-            timestamp: "2025-08-19T00:00:00Z",
-          },
-        ],
-      },
-      {
-        op: "s_contains",
-        args: [
-          {
-            property: "geometry",
-          },
-          {
-            type: "Polygon",
-            coordinates: [
-              [
-                [6.980803263345194, 51.10990285774977],
-                [7.683914901863773, 51.10389656882401],
-                [7.675943114578587, 50.8760849480924],
-                [6.9728314760600085, 50.88815585282626],
-                [6.980803263345194, 51.10990285774977],
-              ],
-            ],
-          },
-        ],
-      },
-    ],
-  },
-};
-
-export const useFilterSTAC = (a_STACRequest?) => {
-  const [response, setResponse] = useState(null);
+export const useFilterSTAC = () => {
+  const [response, setResponse] = useState<ISTACFilterResponse | null>(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = async (a_STACRequest: ISTACFilterRequest) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -66,7 +17,7 @@ export const useFilterSTAC = (a_STACRequest?) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(postBody),
+        body: JSON.stringify(a_STACRequest),
       });
 
       if (!resp.ok) {
@@ -82,9 +33,6 @@ export const useFilterSTAC = (a_STACRequest?) => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   return {
     response,

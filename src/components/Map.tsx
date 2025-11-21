@@ -5,7 +5,7 @@ import { Map as MapLibre } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { EMarkerType, IMarker, useMapStore } from "../store/mapStore";
 import type { Feature, FeatureCollection, Polygon } from "geojson";
-import { useFilterSTAC } from "@/hooks/apiHook";
+import { useFilterSTAC } from "../hooks/apiHook";
 import {
   LineChart,
   Line,
@@ -14,22 +14,35 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { ESTACCollections, ISTACFilterRequest, TCloudCoverFilter, TComparisonOperators, TDateTimeFilter, TLogicalOperators, TSpatialComparison, TSpatialFilter, TTemporalComparison } from "../types/apiTypes";
+import Loading from "./Loading";
+import { ELoadingSize } from "../types/generalTypes";
+import { getReflectanceConverter } from "../utils/calculationUtils";
 
 const Map = () => {
-  /* const { response, error, isLoading, fetchData } = useFilterSTAC()
+  const { response, error, isLoading, fetchData } = useFilterSTAC()
 
   useEffect( () => {
-    console.log("response")
-    console.log(response)
+    if(response){
+      console.log("response numbers")
+      console.log(response?.numberReturned) 
+      if(response.features.length > 0){
+        response.features.forEach( (f, index) => {
+          console.log("Feature "+(index+1))
+          console.log("B08 :")
+          console.log(f.assets["B08_10m"])
+          console.log("B04 :")
+          console.log(f.assets["B04_10m"])
+        })
+      }
+    }
   }, [response])
   useEffect( () => {
-    console.log("error")
-    console.log(error)
+    if(error){
+      console.log("error")
+      console.log(error)
+    }
   }, [error])
-  useEffect( () => {
-    console.log("isLoading")
-    console.log(isLoading)
-  }, [isLoading]) */
 
   const marker = useMapStore((state) => state.marker);
   const startDate = useMapStore((state) => state.startDate);
@@ -42,6 +55,7 @@ const Map = () => {
   const setStartDate = useMapStore((state) => state.setStartDate);
   const setEndDate = useMapStore((state) => state.setEndDate);
   const setCloudCover = useMapStore((state) => state.setCloudCover);
+  const setShowChart = useMapStore((state) => state.setShowChart);
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapObject = useRef<MapLibre | null>(null);
@@ -127,6 +141,10 @@ const Map = () => {
 
     removePolygonLayer();
 
+    if(!mapObject.current!.getStyle()){
+      return
+    }
+
     mapObject.current!.addSource("polygon", {
       type: "geojson",
       data: geojson,
@@ -165,6 +183,19 @@ const Map = () => {
       return updated;
     });
   };
+
+  const getCoordinatesFromMarkers = () : [number, number][] => {
+
+    let coordinates: [number, number][] = markers.map( m => {
+      const lng = m.marker.getLngLat().lng
+      const lat = m.marker.getLngLat().lat
+      return [lng, lat]
+    })
+    // Close the polygon
+    coordinates.push(coordinates[0])
+
+    return coordinates
+  }
 
   // Loading Map
   useEffect(() => {
@@ -248,12 +279,14 @@ const Map = () => {
     const polygonMarkers = markers.filter((m) => m.type == EMarkerType.polygon);
 
     if (polygonMarkers.length === 0) {
+      setShowChart(false)
       removePolygonLayer();
       return;
     }
 
     if (polygonMarkers.length < 4) {
       console.log("not enough polygon points");
+      setShowChart(false)
       return;
     }
 
@@ -353,6 +386,58 @@ const Map = () => {
     { date: "2025-03-01", ndvi: 0.55 },
   ];
 
+  useEffect(()=>{
+    if(showChart){
+      const cloudCoverFilter : TCloudCoverFilter = {
+        op: "<=",
+        args: [
+          {
+            property: "eo:cloud_cover",
+          },
+          Number(cloudCover),
+        ],
+      }
+      const datetimeFilter: TDateTimeFilter = {
+        op: "t_during",
+        args: [
+          {
+            property: "datetime",
+          },
+          {
+            interval: [startDate, endDate],
+          },
+        ],
+      }
+      const geometryFilter: TSpatialFilter = {
+        op: "s_contains",
+        args: [
+          {
+            property: "geometry",
+          },
+          {
+            type: "Polygon",
+            coordinates: [
+              getCoordinatesFromMarkers(),
+            ],
+          },
+        ],
+      }
+
+      const postBody: ISTACFilterRequest = {
+        collections: [ESTACCollections.Sentinel2l2a],
+        filter: {
+          op: "and",
+          args: [
+            cloudCoverFilter,
+            datetimeFilter,
+            geometryFilter,
+          ],
+        },
+      };
+      fetchData(postBody)
+    }
+  },[showChart])
+
   return (
     <div className={` ${mapStyle.wrapper}`}>
       <div
@@ -363,18 +448,27 @@ const Map = () => {
       />
       {showChart ? (
         <div className={` ${mapStyle.staticChart}`}>
-          {/* resize automatically */}
-          <ResponsiveContainer width="100%" height="100%">
-            {/* array of objects */}
-            <LineChart data={sampleData}>
-              <XAxis dataKey="date" />
-              {/* Y automatically scale to fit the data */}
-              <YAxis />
-              {/* popup tooltip by hovering */}
-              <Tooltip />
-              <Line type="linear" dataKey="ndvi" stroke="#2ecc71" />
-            </LineChart>
-          </ResponsiveContainer>
+          { 
+            isLoading
+            ?
+              <Loading 
+                size={ELoadingSize.md}
+                marginVertical={"1vh"}
+              />
+            :
+              <ResponsiveContainer width="100%" height="100%">
+                {/* resize automatically */}
+                {/* array of objects */}
+                <LineChart data={sampleData}>
+                  <XAxis dataKey="date" />
+                  {/* Y automatically scale to fit the data */}
+                  <YAxis />
+                  {/* popup tooltip by hovering */}
+                  <Tooltip />
+                  <Line type="linear" dataKey="ndvi" stroke="#2ecc71" />
+                </LineChart>
+              </ResponsiveContainer>
+          }
         </div>
       ) : (
         <></>
