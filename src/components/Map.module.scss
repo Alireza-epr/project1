@@ -1,0 +1,25 @@
+
+.wrapper {
+  background-color: lightseagreen;
+  position: relative;
+  width: 70%;
+  padding: 1.5vh;
+}
+
+.mapWrapper{
+  background-color: lightcyan;
+  border-radius: 16px;
+}
+
+.staticChart {
+  border-radius: 16px;
+  position: absolute;
+  padding: 16px;
+  width: 80%;
+  height: 80%;
+  background-color: #C5F1EF;
+  left: 10%;
+  top: 10%;
+  z-index: 2;
+  display: flex;
+}

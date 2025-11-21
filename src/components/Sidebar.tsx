@@ -1,130 +1,162 @@
-import sidebarStyles from "./Sidebar.module.scss"
-import CButton from "../components/CButton"
-import { useMapStore } from "../store/mapStore"
-import { useEffect, useState } from "react"
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { parseURL, serializeURL } from "../utils/url"
+import sidebarStyles from "./Sidebar.module.scss";
+import CButton from "../components/CButton";
+import Section from "./Section";
+import { EMarkerType, TMarker, useMapStore } from "../store/mapStore";
+import { useEffect, useState } from "react";
+import DateInput from "./DateInput";
+import RangeInput from "./RangeInput";
+import Coordinates from "./Coordinates";
 
 const Sidebar = () => {
+  const marker = useMapStore((state) => state.marker);
+  const setMarker = useMapStore((state) => state.setMarker);
 
-  const enableMarker = useMapStore( state => state.enableMarker)
-  const setEnableMarker = useMapStore( state => state.setEnableMarker)
+  const markers = useMapStore((state) => state.markers);
+  const setMarkers = useMapStore((state) => state.setMarkers);
 
-  const enableROI = useMapStore( state => state.enableROI)
-  const setEnableROI = useMapStore( state => state.setEnableROI)
+  const showChart = useMapStore((state) => state.showChart);
+  const setShowChart = useMapStore((state) => state.setShowChart);
 
-  const handleSetMarkerClick = () => {
-    setEnableMarker(!enableMarker)
-  }
+  const startDate = useMapStore((state) => state.startDate);
+  const setStartDate = useMapStore((state) => state.setStartDate);
 
-  const handleSetROIClick = () => {
-    setEnableROI(!enableROI)
-  }
+  const endDate = useMapStore((state) => state.endDate);
+  const setEndDate = useMapStore((state) => state.setEndDate);
 
-  //TODO: define series page
-  const [ showChart, setShowChart ] = useState<boolean>(false)
+  const cloudCover = useMapStore((state) => state.cloudCover);
+  const setCloudCover = useMapStore((state) => state.setCloudCover);
+
+  const handlePointClick = () => {
+    setMarker((prev) => {
+      if (prev.point) {
+        return {
+          ...prev,
+          point: false,
+        };
+      } else {
+        const markerKeys = Object.keys(prev);
+        let newMarker = {} as any;
+        for (const key of markerKeys) {
+          newMarker[key] = key == EMarkerType.point;
+        }
+        return newMarker;
+      }
+    });
+  };
+
+  const handlePolygonClick = () => {
+    setMarker((prev) => {
+      if (prev.polygon) {
+        return {
+          ...prev,
+          polygon: false,
+        };
+      } else {
+        const markerKeys = Object.keys(prev);
+        let newMarker = {} as any;
+        for (const key of markerKeys) {
+          newMarker[key] = key == EMarkerType.polygon;
+        }
+        return newMarker;
+      }
+    });
+  };
+
+  const handleClearPoint = () => {
+    setMarkers((prev) => {
+      prev.forEach((m) => {
+        if (m.type === EMarkerType.point) {
+          m.marker.remove();
+        }
+      });
+      return prev.filter((m) => m.type !== EMarkerType.point);
+    });
+  };
+
+  const handleClearPolygon = () => {
+    setMarkers((prev) => {
+      const toRemove = prev.filter((m) => m.type === EMarkerType.polygon);
+      toRemove.forEach((m) => m.marker.remove());
+
+      return prev.filter((m) => m.type !== EMarkerType.polygon);
+    });
+  };
+
   const handleSetStaticChart = () => {
-    setShowChart(!showChart)
-  }
+    setShowChart(!showChart);
+  };
 
-  const sampleData = [
-    { date: '2025-01-01', ndvi: 0.4 },
-    { date: '2025-02-01', ndvi: 0.5 },
-    { date: '2025-03-01', ndvi: 0.55 },
-  ];
+  const handleStartDateChange = (a_Date: string) => {
+    setStartDate(a_Date);
+  };
 
-  // Read URLParams
-  const setROI = useMapStore( state => state.setROI)
-  const setStartDate = useMapStore( state => state.setStartDate)
-  const setEndDate = useMapStore( state => state.setEndDate)
+  const handleEndDateChange = (a_Date: string) => {
+    setEndDate(a_Date);
+  };
 
-  useEffect(()=> {
-    const params = new URLSearchParams(window.location.search)
-
-    const roiParam = params.get("roi")
-    const startDateParam = params.get("startDate")
-    const endDateParam = params.get("endDate")
-
-    if(roiParam){
-      let newROI = JSON.parse(roiParam)
-      setROI(newROI)
-      console.log("URL state / ROI")
-      console.log(newROI)
-    }
-    if(startDateParam){
-      setStartDate(startDateParam)
-      console.log("URL state / StartDate")
-      console.log(startDateParam)
-    }
-    if(endDateParam){
-      setEndDate(endDateParam)
-      console.log("URL state / EndDate")
-      console.log(endDateParam)
-    }
-  }, [])
-
-  // Write URLParams
-  const roi = useMapStore( state => state.roi)
-  const startDate = useMapStore( state => state.startDate)
-  const endDate = useMapStore( state => state.endDate)
-  useEffect(()=>{
-    const params = new URLSearchParams();
-    if(roi){
-      params.set("roi", JSON.stringify(roi))
-    }
-    if(startDate){
-      params.set("startDate", startDate)
-    }
-    if(endDate){
-      params.set("endDate", endDate)
-    }
-
-    /* console.log("roi")
-    console.log(roi)
-    const serializedURL = serializeURL(roi, startDate, endDate)
-    window.history.replaceState( null, '', serializedURL) */
-
-    window.history.replaceState( null, '', `?${params.toString()}`)
-    console.log("URL state updated")
-  }, [roi])
-
-
+  const handleRangeChange = (a_Range: string) => {
+    setCloudCover(a_Range);
+  };
   return (
     <div className={` ${sidebarStyles.wrapper}`}>
-      <CButton 
-        title={ !enableMarker ? "Enable Marker" : "Disable Marker" }
-        onButtonClick={handleSetMarkerClick}
-      /> 
-      <CButton 
-        title={ !enableROI ? "Enable ROI" : "Disable ROI" }
-        onButtonClick={handleSetROIClick}
-      /> 
-      <CButton 
-        title={ !showChart ? "Static Chart" : "Hide Chart" }
-        onButtonClick={handleSetStaticChart}
-      /> 
-      { showChart 
-        ?
-          <div className={` ${sidebarStyles.staticChart}`}>
-            {/* resize automatically */}
-            <ResponsiveContainer width="100%" height="100%">
-              {/* array of objects */}
-              <LineChart data={sampleData}>
-                <XAxis dataKey="date" />
-                {/* Y automatically scale to fit the data */}
-                <YAxis />
-                {/* popup tooltip by hovering */}
-                <Tooltip />
-                <Line type="linear" dataKey="ndvi" stroke="#2ecc71" />
-              </LineChart>
-            </ResponsiveContainer>
+      <div className={` ${sidebarStyles.buttonsWrapper}`}>
+        <Section title="Drawing">
+          <div className={` ${sidebarStyles.buttonRowWrapper}`}>
+            <CButton
+              title={!marker.point ? "Enable Marker" : "Disable Marker"}
+              onButtonClick={handlePointClick}
+            />
+            <CButton
+              title={"Clear Markers"}
+              onButtonClick={handleClearPoint}
+              disable={
+                markers.filter((m) => m.type == EMarkerType.point).length == 0
+              }
+            />
           </div>
-        :
-          <></>
-      }
-      
-    </div>
-  )
-}
+          <div className={` ${sidebarStyles.buttonRowWrapper}`}>
+            <CButton
+              title={!marker.polygon ? "Enable ROI" : "Disable ROI"}
+              onButtonClick={handlePolygonClick}
+            />
+            <CButton
+              title={"Clear ROI"}
+              onButtonClick={handleClearPolygon}
+              disable={
+                markers.filter((m) => m.type == EMarkerType.polygon).length < 4
+              }
+            />
+          </div>
+        </Section>
 
-export default Sidebar
+        <Section title="Start Date">
+          <DateInput value={startDate} onDateChange={handleStartDateChange} />
+        </Section>
+
+        <Section title="End Date">
+          <DateInput value={endDate} onDateChange={handleEndDateChange} />
+        </Section>
+
+        <Section title={`Cloud Cover - ${cloudCover}%`}>
+          <RangeInput value={cloudCover} onRangeChange={handleRangeChange} />
+        </Section>
+
+        <Section title="ROI Coordinates">
+          <Coordinates />
+        </Section>
+
+        <Section title="Chart">
+          <CButton
+            title={!showChart ? "Static Chart" : "Hide Chart"}
+            onButtonClick={handleSetStaticChart}
+            disable={
+              markers.filter((m) => m.type == EMarkerType.polygon).length < 4
+            }
+          />
+        </Section>
+      </div>
+    </div>
+  );
+};
+
+export default Sidebar;

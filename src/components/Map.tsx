@@ -1,185 +1,480 @@
-import mapStyle from './Map.module.scss'
-import { useRef, useEffect, useCallback } from 'react';
-import maplibregl, { LngLat } from 'maplibre-gl';
-import { Map as MapLibre } from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import { useMapStore } from '../store/mapStore';
-import type { Feature, FeatureCollection, Polygon } from 'geojson'
+import mapStyle from "./Map.module.scss";
+import { useRef, useEffect, useCallback } from "react";
+import maplibregl from "maplibre-gl";
+import { Map as MapLibre } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { EMarkerType, IMarker, useMapStore } from "../store/mapStore";
+import type { Feature, FeatureCollection, Polygon } from "geojson";
+import { useFilterSTAC } from "../hooks/apiHook";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { ESTACCollections, ISTACFilterRequest, TCloudCoverFilter, TComparisonOperators, TDateTimeFilter, TLogicalOperators, TSpatialComparison, TSpatialFilter, TTemporalComparison } from "../types/apiTypes";
+import Loading from "./Loading";
+import { ELoadingSize } from "../types/generalTypes";
+import { getReflectanceConverter } from "../utils/calculationUtils";
 
 const Map = () => {
+  const { response, error, isLoading, fetchData } = useFilterSTAC()
 
-    const enableROI = useMapStore( state => state.enableROI )
-    const enableMarker = useMapStore( state => state.enableMarker )
-    const setROI = useMapStore( state => state.setROI)
+  useEffect( () => {
+    if(response){
+      console.log("response numbers")
+      console.log(response?.numberReturned) 
+      if(response.features.length > 0){
+        response.features.forEach( (f, index) => {
+          console.log("Feature "+(index+1))
+          console.log("B08 :")
+          console.log(f.assets["B08_10m"])
+          console.log("B04 :")
+          console.log(f.assets["B04_10m"])
+        })
+      }
+    }
+  }, [response])
+  useEffect( () => {
+    if(error){
+      console.log("error")
+      console.log(error)
+    }
+  }, [error])
 
-    const mapContainer = useRef<HTMLDivElement>(null)
-    const mapObject = useRef<MapLibre | null>(null)
+  const marker = useMapStore((state) => state.marker);
+  const startDate = useMapStore((state) => state.startDate);
+  const endDate = useMapStore((state) => state.endDate);
+  const cloudCover = useMapStore((state) => state.cloudCover);
+  const markers = useMapStore((state) => state.markers);
+  const showChart = useMapStore((state) => state.showChart);
 
-    const polygonCoords = useRef<[number, number][]>([])
+  const setMarkers = useMapStore((state) => state.setMarkers);
+  const setStartDate = useMapStore((state) => state.setStartDate);
+  const setEndDate = useMapStore((state) => state.setEndDate);
+  const setCloudCover = useMapStore((state) => state.setCloudCover);
+  const setShowChart = useMapStore((state) => state.setShowChart);
 
-    const handleMarker = (a_Event: maplibregl.MapMouseEvent) => {
-        if(enableMarker){
-            a_Event.preventDefault()
-            const event = {
-                lngLat: a_Event.lngLat,
-                originalEvent: a_Event.originalEvent,
-                point: a_Event.point,
-                target: a_Event.target,
-                type: a_Event.type
-            }
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const mapObject = useRef<MapLibre | null>(null);
 
-            if(mapObject.current){
-                const marker = new maplibregl.Marker({draggable: true})
-                .setLngLat([event.lngLat.lng, event.lngLat.lat])
-                .addTo(mapObject.current);
+  const handlePointMarker = (a_Event: maplibregl.MapMouseEvent) => {
+    if (mapObject.current) {
+      addMarker(
+        [a_Event.lngLat.lng, a_Event.lngLat.lat],
+        mapObject.current,
+        EMarkerType.point,
+        { draggable: true },
+      );
+    }
+  };
 
-                console.log("Marker")
-                console.log(marker)
+  const handlePolygonMarker = (a_Event: maplibregl.MapMouseEvent) => {
+    if (mapObject.current) {
+      addMarker(
+        [a_Event.lngLat.lng, a_Event.lngLat.lat],
+        mapObject.current,
+        EMarkerType.polygon,
+      );
+    }
+  };
 
-            }
+  const addMarker = (
+    a_LngLat: [number, number],
+    a_Map: maplibregl.Map,
+    a_Type: EMarkerType,
+    a_Options?: maplibregl.MarkerOptions,
+  ) => {
+    const markerElement = new maplibregl.Marker(a_Options)
+      .setLngLat(a_LngLat)
+      .addTo(a_Map);
 
-        } else {
+    const newMarker = {
+      type: a_Type,
+      marker: markerElement,
+    };
 
-            if(mapObject.current){
-                
-            }
+    setMarkers((prevMarkers) => [...prevMarkers, newMarker]);
+  };
+
+  const removePolygonLayer = () => {
+    if (mapObject.current) {
+      const polygonLayer = mapObject.current.getLayer("polygon");
+      if (polygonLayer) {
+        mapObject.current.removeLayer("polygon");
+        mapObject.current.removeSource("polygon");
+      }
+    }
+  };
+
+  const removePolygon = () => {
+    if (mapObject.current) {
+      // Remove polygon points
+      markers.forEach((m) => {
+        if (m.type === EMarkerType.polygon) {
+          m.marker.remove();
         }
+      });
+      setMarkers((prev) => prev.filter((m) => m.type !== EMarkerType.polygon));
+
+      // Remove polygon layer
+      removePolygonLayer();
+    }
+  };
+
+  const drawPolygon = (a_PolygonMarkers: IMarker[]) => {
+    const polygonCoords = a_PolygonMarkers.map((m) => {
+      const lngLat = m.marker.getLngLat();
+      return [lngLat.lng, lngLat.lat];
+    });
+
+    const geojson: Feature<Polygon> = {
+      type: "Feature",
+      geometry: {
+        type: "Polygon",
+        coordinates: [polygonCoords], // note: array of arrays
+      },
+      properties: {},
+    };
+
+    removePolygonLayer();
+
+    if(!mapObject.current!.getStyle()){
+      return
     }
 
-    const handleROI = (a_Event: maplibregl.MapMouseEvent) => {
+    mapObject.current!.addSource("polygon", {
+      type: "geojson",
+      data: geojson,
+    });
 
-        polygonCoords.current.push([a_Event.lngLat.lng, a_Event.lngLat.lat])
-        const marker = new maplibregl.Marker({draggable: true})
-                .setLngLat([a_Event.lngLat.lng, a_Event.lngLat.lat])
-                .addTo(mapObject.current!);
+    mapObject.current!.addLayer({
+      id: "polygon",
+      type: "fill",
+      source: "polygon",
+      paint: {
+        "fill-color": "#088",
+        "fill-opacity": 0.5,
+      },
+    });
+  };
 
+  const addMarkersToMap = () => {
+    setMarkers((prev) => {
+      const updated: IMarker[] = [];
 
-        if(polygonCoords.current.length < 4) {
-           return 
-        } 
-
-        if(polygonCoords.current.length > 4) {
-            polygonCoords.current = []
-            polygonCoords.current.push([a_Event.lngLat.lng, a_Event.lngLat.lat])
-            return 
-        } 
-
-        console.log("Draw polygon")
-        console.log(polygonCoords.current)
-        setROI(polygonCoords.current)
-        polygonCoords.current.push( polygonCoords.current[0] )
-
-
-        if(mapObject.current){
-            
-            clearROI()
-
-            const geojson: Feature<Polygon> = {
-                type: "Feature",
-                geometry: {
-                    type: "Polygon",
-                    coordinates: [polygonCoords.current] // note: array of arrays
-                },
-                properties: {}
-            }
-            
-            mapObject.current.addSource("roi-polygon", {
-                type: "geojson",
-                data: geojson
-            });
-
-            mapObject.current.addLayer({
-                id: "roi-polygon",
-                type: "fill",
-                source: "roi-polygon",
-                paint: {
-                    "fill-color": "#088",
-                    "fill-opacity": 0.5
-                }
-            });
+      for (const marker of prev) {
+        if (marker.marker._map) {
+          updated.push(marker);
+          continue;
         }
-       
-    }
 
-    const clearROI = useCallback(() => {
-        if(mapObject.current){
-            const roi = mapObject.current.getLayer("roi-polygon")
-            
-            if(roi){
-                mapObject.current.removeLayer("roi-polygon")
-                mapObject.current.removeSource("roi-polygon")
-            }
-        }
-    }, [])
+        const newMarkerWithMap = new maplibregl.Marker()
+          .setLngLat(marker.marker.getLngLat())
+          .addTo(mapObject.current!);
 
-    // Loading Map
-    useEffect(()=> {
-
-        if( mapObject.current || !mapContainer.current) return
-        
-        const map = new maplibregl.Map({
-            container: mapContainer.current, 
-            //style: 'https://demotiles.maplibre.org/globe.json', 
-            style: 'https://demotiles.maplibre.org/style.json',
-            center: [29, 39], // [lng, lat]
-            zoom: 3 
+        updated.push({
+          type: marker.type,
+          marker: newMarkerWithMap,
         });
+      }
+      return updated;
+    });
+  };
 
-        mapObject.current = map
-        
-        return ( ) => {
-            // By component unmounting
-            mapObject.current?.remove()
-            mapObject.current = null
-        }
+  const getCoordinatesFromMarkers = () : [number, number][] => {
 
-    }, [])
+    let coordinates: [number, number][] = markers.map( m => {
+      const lng = m.marker.getLngLat().lng
+      const lat = m.marker.getLngLat().lat
+      return [lng, lat]
+    })
+    // Close the polygon
+    coordinates.push(coordinates[0])
 
-    // Handle Marker State
-    useEffect(()=> {
-        if( !mapObject.current ) return 
+    return coordinates
+  }
 
-        if(enableMarker){
-            // Arrow function causes the function reference to change
-            mapObject.current.on("click", handleMarker)
-        } else {
-            mapObject.current.off("click", handleMarker)
-        }
+  // Loading Map
+  useEffect(() => {
+    if (mapObject.current || !mapContainer.current) return;
 
-        return () => {
-            mapObject.current?.off("click", handleMarker)
-        }
+    const map = new maplibregl.Map({
+      container: mapContainer.current,
+      style: {
+        version: 8,
+        sources: {
+          "osm-tiles": {
+            type: "raster",
+            tiles: [
+              "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            ],
+            tileSize: 256,
+            attribution:
+              '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          },
+        },
+        layers: [
+          {
+            id: "osm-tiles",
+            type: "raster",
+            source: "osm-tiles",
+            minzoom: 0,
+            maxzoom: 19,
+          },
+        ],
+      },
+      center: [7.4711617988066905, 51.36223529413988], // [lng, lat]
+      zoom: 15,
+      maxZoom: 18,
+    });
 
-    }, [enableMarker])
+    map.addControl(new maplibregl.NavigationControl());
 
-    // Handle ROI State
-    useEffect(()=> {
-        if( !mapObject.current ) return 
+    mapObject.current = map;
 
-        if(enableROI){
-            clearROI()
-            polygonCoords.current = []
+    return () => {
+      // By component unmounting
+      mapObject.current?.remove();
+      mapObject.current = null;
+    };
+  }, []);
 
-            mapObject.current.on("click", handleROI)
-        } else {
-            mapObject.current.off("click", handleROI)
-        }
+  // Handle Marker
+  useEffect(() => {
+    if (!mapObject.current) return;
 
-        return () => {
-            mapObject.current?.off("click", handleROI)
-        }
+    if (marker.point) {
+      // Arrow function causes the function reference to change
+      mapObject.current.on("click", handlePointMarker);
+    } else {
+      mapObject.current.off("click", handlePointMarker);
+    }
 
-    }, [enableROI])
+    if (marker.polygon) {
+      mapObject.current.on("click", handlePolygonMarker);
+    } else {
+      mapObject.current.off("click", handlePolygonMarker);
+    }
 
+    return () => {
+      mapObject.current?.off("click", handlePointMarker);
+      mapObject.current?.off("click", handlePolygonMarker);
+    };
+  }, [marker]);
 
-    return (
-        <div 
-            className={` ${mapStyle.wrapper}`}
-            style={{width: "100%",height: "100%"}}
-            ref={mapContainer}
-            data-testid="map-container"
-        />            
-    )
-}
+  // Handle Polygon Drawing
+  useEffect(() => {
+    if (!mapObject.current) return;
 
-export default Map
+    if (markers.length !== 0 && markers.some((m) => !m.marker._map)) {
+      addMarkersToMap();
+      return;
+    }
+
+    const polygonMarkers = markers.filter((m) => m.type == EMarkerType.polygon);
+
+    if (polygonMarkers.length === 0) {
+      setShowChart(false)
+      removePolygonLayer();
+      return;
+    }
+
+    if (polygonMarkers.length < 4) {
+      console.log("not enough polygon points");
+      setShowChart(false)
+      return;
+    }
+
+    if (polygonMarkers.length > 4) {
+      const newPolygonMarker = polygonMarkers[polygonMarkers.length - 1].marker;
+      const lngLat = newPolygonMarker.getLngLat();
+
+      console.log("removing polygon");
+      removePolygon();
+
+      addMarker(
+        [lngLat.lng, lngLat.lat],
+        mapObject.current,
+        EMarkerType.polygon,
+      );
+      return;
+    }
+
+    console.log("start drawing polygon");
+    console.log(markers);
+    drawPolygon(polygonMarkers);
+  }, [markers]);
+
+  // Read URLParams
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    const polygonCoordsParam = params.get("roi");
+    const startDateParam = params.get("startDate");
+    const endDateParam = params.get("endDate");
+    const cloudParam = params.get("cloud");
+
+    if (polygonCoordsParam) {
+      let polygonCoords: [number, number][] = JSON.parse(polygonCoordsParam);
+
+      // Clear polygon points
+      setMarkers((prev) => {
+        const pointMarkers = prev.filter((m) => m.type === EMarkerType.point);
+
+        return pointMarkers;
+      });
+
+      // Add polygon markers
+      setTimeout(() => {
+        polygonCoords.forEach((coordinate) => {
+          const [lng, lat] = coordinate;
+          if (!mapObject.current) {
+            console.log("Map is not ready to set markers from URL");
+            return;
+          }
+          addMarker([lng, lat], mapObject.current, EMarkerType.polygon);
+        });
+      }, 100);
+    }
+    if (startDateParam) {
+      setStartDate(startDateParam);
+    }
+    if (endDateParam) {
+      setEndDate(endDateParam);
+    }
+    if (cloudParam) {
+      setCloudCover(cloudParam);
+    }
+  }, []);
+
+  // Write URLParams
+  useEffect(() => {
+    const polygonMarkers = markers.filter(
+      (m) => m.type === EMarkerType.polygon,
+    );
+
+    const params = new URLSearchParams();
+
+    if (polygonMarkers.length > 0) {
+      const polygonCoords = polygonMarkers.map((m) => {
+        const lngLat = m.marker.getLngLat();
+        return [lngLat.lng, lngLat.lat];
+      });
+      params.set("roi", JSON.stringify(polygonCoords));
+    }
+    if (startDate) {
+      params.set("startDate", startDate);
+    }
+    if (endDate) {
+      params.set("endDate", endDate);
+    }
+    if (cloudCover) {
+      params.set("cloud", cloudCover);
+    }
+
+    window.history.replaceState(null, "", `?${params.toString()}`);
+  }, [markers, startDate, endDate, cloudCover]);
+
+  const sampleData = [
+    { date: "2025-01-01", ndvi: 0.4 },
+    { date: "2025-02-01", ndvi: 0.5 },
+    { date: "2025-03-01", ndvi: 0.55 },
+  ];
+
+  useEffect(()=>{
+    if(showChart){
+      const cloudCoverFilter : TCloudCoverFilter = {
+        op: "<=",
+        args: [
+          {
+            property: "eo:cloud_cover",
+          },
+          Number(cloudCover),
+        ],
+      }
+      const datetimeFilter: TDateTimeFilter = {
+        op: "t_during",
+        args: [
+          {
+            property: "datetime",
+          },
+          {
+            interval: [startDate, endDate],
+          },
+        ],
+      }
+      const geometryFilter: TSpatialFilter = {
+        op: "s_contains",
+        args: [
+          {
+            property: "geometry",
+          },
+          {
+            type: "Polygon",
+            coordinates: [
+              getCoordinatesFromMarkers(),
+            ],
+          },
+        ],
+      }
+
+      const postBody: ISTACFilterRequest = {
+        collections: [ESTACCollections.Sentinel2l2a],
+        filter: {
+          op: "and",
+          args: [
+            cloudCoverFilter,
+            datetimeFilter,
+            geometryFilter,
+          ],
+        },
+      };
+      fetchData(postBody)
+    }
+  },[showChart])
+
+  return (
+    <div className={` ${mapStyle.wrapper}`}>
+      <div
+        className={` ${mapStyle.mapWrapper}`}
+        style={{ width: "100%", height: "100%" }}
+        ref={mapContainer}
+        data-testid="map-container"
+      />
+      {showChart ? (
+        <div className={` ${mapStyle.staticChart}`}>
+          { 
+            isLoading
+            ?
+              <Loading 
+                size={ELoadingSize.md}
+                marginVertical={"1vh"}
+              />
+            :
+              <ResponsiveContainer width="100%" height="100%">
+                {/* resize automatically */}
+                {/* array of objects */}
+                <LineChart data={sampleData}>
+                  <XAxis dataKey="date" />
+                  {/* Y automatically scale to fit the data */}
+                  <YAxis />
+                  {/* popup tooltip by hovering */}
+                  <Tooltip />
+                  <Line type="linear" dataKey="ndvi" stroke="#2ecc71" />
+                </LineChart>
+              </ResponsiveContainer>
+          }
+        </div>
+      ) : (
+        <></>
+      )}
+    </div>
+  );
+};
+
+export default Map;
