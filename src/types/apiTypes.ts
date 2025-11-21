@@ -1,15 +1,15 @@
 import { IGeometry } from "./geoJSON";
 
 export enum ESTACURLS {
-  baseURL= "https://catalogue.dataspace.copernicus.eu/stac",
-  searchURL= "https://stac.dataspace.copernicus.eu/v1/search",
-  collectionsURL= "https://stac.dataspace.copernicus.eu/v1/collections",
-  queryablesURL= "https://stac.dataspace.copernicus.eu/v1/queryables",
-  featureJSONURL= "https://geojson.org/schema/Feature.json"
+  baseURL = "https://catalogue.dataspace.copernicus.eu/stac",
+  searchURL = "https://stac.dataspace.copernicus.eu/v1/search",
+  collectionsURL = "https://stac.dataspace.copernicus.eu/v1/collections",
+  queryablesURL = "https://stac.dataspace.copernicus.eu/v1/queryables",
+  featureJSONURL = "https://geojson.org/schema/Feature.json",
 }
 
 export enum ESTACCollections {
-    Sentinel2l2a = "sentinel-2-l2a"
+  Sentinel2l2a = "sentinel-2-l2a",
 }
 
 export type TComparisonOperators = "=" | "<>" | "<" | "<=" | ">" | ">=";
@@ -48,7 +48,7 @@ export type TCloudCoverFilter = [
     property: "eo:cloud_cover";
   },
   number,
-  number?
+  number?,
 ];
 
 export type TDateTimeFilter = [
@@ -57,7 +57,7 @@ export type TDateTimeFilter = [
   },
   {
     timestamp?: string;
-    interval?: string[]
+    interval?: string[];
   },
 ];
 
@@ -65,22 +65,26 @@ export type TIdFilter = [
   {
     property: "id";
   },
-  string
+  string,
 ];
 
 export type TSpatialFilter = [
   {
     property: "geometry";
   },
-  IGeometry
+  IGeometry,
 ];
 
 export interface ISTACFilterOP {
-  op: TComparisonOperators | TLogicalOperators | TTemporalComparison | TSpatialComparison;
+  op:
+    | TComparisonOperators
+    | TLogicalOperators
+    | TTemporalComparison
+    | TSpatialComparison;
   args: TCloudCoverFilter | TDateTimeFilter | TIdFilter;
 }
 
 export interface ISTACFilterRequest {
-  collections: [ ESTACCollections ];
+  collections: [ESTACCollections];
   filter?: ISTACFilterOP;
 }

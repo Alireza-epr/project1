@@ -4,23 +4,23 @@ import { create } from "zustand";
 import { combine } from "zustand/middleware";
 
 export enum EMarkerType {
-  point= "point",
-  polygon= "polygon"
+  point = "point",
+  polygon = "polygon",
 }
 export interface IMarker {
-  type: EMarkerType,
-  marker: Marker
+  type: EMarkerType;
+  marker: Marker;
 }
 
-export type TMarker = Record<EMarkerType, boolean>
+export type TMarker = Record<EMarkerType, boolean>;
 
 export interface IMapStoreStates {
   marker: TMarker;
-  markers: IMarker[]
+  markers: IMarker[];
   startDate: string;
   endDate: string;
-  cloudCover: string
-  showChart: boolean
+  cloudCover: string;
+  showChart: boolean;
 }
 
 export interface IMapStoreActions {
@@ -29,10 +29,9 @@ export interface IMapStoreActions {
   setMarkers: (a_Markers: IMarker[] | ((prev: IMarker[]) => IMarker[])) => void;
   setStartDate: (a_Start: string | ((prev: string) => string)) => void;
   setEndDate: (a_End: string | ((prev: string) => string)) => void;
-  setCloudCover: (a_CloudCover: string | ((a_Prev: string) => string)) => void
+  setCloudCover: (a_CloudCover: string | ((a_Prev: string) => string)) => void;
   setShowChart: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
 }
-
 
 export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
   combine(
@@ -52,34 +51,42 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       // Actions
       setMarker: (a_Marker: TMarker | ((a_Prev: TMarker) => TMarker)) =>
         set((state) => ({
-          marker: typeof a_Marker === "function" ? a_Marker(state.marker) : a_Marker,
+          marker:
+            typeof a_Marker === "function" ? a_Marker(state.marker) : a_Marker,
         })),
 
       setMarkers: (a_Markers: IMarker[] | ((a_Prev: IMarker[]) => IMarker[])) =>
         set((state) => ({
-          markers: typeof a_Markers === "function" ? a_Markers(state.markers) : a_Markers,
+          markers:
+            typeof a_Markers === "function"
+              ? a_Markers(state.markers)
+              : a_Markers,
         })),
 
       setStartDate: (a_Start: string | ((a_Prev: string) => string)) =>
         set((state) => ({
-          startDate: typeof a_Start === "function" ? a_Start(state.startDate) : a_Start,
+          startDate:
+            typeof a_Start === "function" ? a_Start(state.startDate) : a_Start,
         })),
 
       setEndDate: (a_End: string | ((a_Prev: string) => string)) =>
         set((state) => ({
           endDate: typeof a_End === "function" ? a_End(state.endDate) : a_End,
         })),
-      
+
       setCloudCover: (a_CloudCover: string | ((a_Prev: string) => string)) =>
         set((state) => ({
-          cloudCover: typeof a_CloudCover === "function" ? a_CloudCover(state.cloudCover) : a_CloudCover,
+          cloudCover:
+            typeof a_CloudCover === "function"
+              ? a_CloudCover(state.cloudCover)
+              : a_CloudCover,
         })),
 
       setShowChart: (a_Value: boolean | ((prev: boolean) => boolean)) =>
         set((state) => ({
-          showChart: typeof a_Value === "function" ? a_Value(state.showChart) : a_Value,
+          showChart:
+            typeof a_Value === "function" ? a_Value(state.showChart) : a_Value,
         })),
-
-    })
-  )
+    }),
+  ),
 );

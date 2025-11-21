@@ -7,99 +7,96 @@ import DateInput from "./DateInput";
 import RangeInput from "./RangeInput";
 import Coordinates from "./Coordinates";
 
-
 const Sidebar = () => {
   const marker = useMapStore((state) => state.marker);
   const setMarker = useMapStore((state) => state.setMarker);
 
-  const markers = useMapStore((state)=> state.markers)
-  const setMarkers = useMapStore((state)=> state.setMarkers)
+  const markers = useMapStore((state) => state.markers);
+  const setMarkers = useMapStore((state) => state.setMarkers);
 
-  const showChart = useMapStore((state)=> state.showChart)
-  const setShowChart = useMapStore((state)=> state.setShowChart)
+  const showChart = useMapStore((state) => state.showChart);
+  const setShowChart = useMapStore((state) => state.setShowChart);
 
-  const startDate = useMapStore((state) => state.startDate)
-  const setStartDate = useMapStore((state) => state.setStartDate)
-  
-  const endDate = useMapStore((state) => state.endDate)
-  const setEndDate = useMapStore((state) => state.setEndDate)
+  const startDate = useMapStore((state) => state.startDate);
+  const setStartDate = useMapStore((state) => state.setStartDate);
 
-  const cloudCover = useMapStore((state) => state.cloudCover)
-  const setCloudCover = useMapStore((state) => state.setCloudCover)
+  const endDate = useMapStore((state) => state.endDate);
+  const setEndDate = useMapStore((state) => state.setEndDate);
 
+  const cloudCover = useMapStore((state) => state.cloudCover);
+  const setCloudCover = useMapStore((state) => state.setCloudCover);
 
   const handlePointClick = () => {
-    setMarker((prev)=>{
-      if(prev.point){
+    setMarker((prev) => {
+      if (prev.point) {
         return {
           ...prev,
-          point: false
-        }
+          point: false,
+        };
       } else {
-        const markerKeys = Object.keys( prev )
-        let newMarker = {} as any
-        for(const key of markerKeys ){
-          newMarker[key] = key == EMarkerType.point
+        const markerKeys = Object.keys(prev);
+        let newMarker = {} as any;
+        for (const key of markerKeys) {
+          newMarker[key] = key == EMarkerType.point;
         }
-        return newMarker
+        return newMarker;
       }
-    })
+    });
   };
 
   const handlePolygonClick = () => {
-    setMarker((prev)=>{
-      if(prev.polygon){
+    setMarker((prev) => {
+      if (prev.polygon) {
         return {
           ...prev,
-          polygon: false
-        }
+          polygon: false,
+        };
       } else {
-        const markerKeys = Object.keys( prev )
-        let newMarker = {} as any
-        for(const key of markerKeys ){
-          newMarker[key] = key == EMarkerType.polygon
+        const markerKeys = Object.keys(prev);
+        let newMarker = {} as any;
+        for (const key of markerKeys) {
+          newMarker[key] = key == EMarkerType.polygon;
         }
-        return newMarker
+        return newMarker;
       }
-    })
+    });
   };
 
   const handleClearPoint = () => {
-    setMarkers( (prev)=> {
-      prev.forEach( m => {
-        if(m.type === EMarkerType.point){
-          m.marker.remove()
+    setMarkers((prev) => {
+      prev.forEach((m) => {
+        if (m.type === EMarkerType.point) {
+          m.marker.remove();
         }
-      })
-      return prev.filter( m => m.type !== EMarkerType.point )
-    })
-  }
+      });
+      return prev.filter((m) => m.type !== EMarkerType.point);
+    });
+  };
 
   const handleClearPolygon = () => {
+    setMarkers((prev) => {
+      const toRemove = prev.filter((m) => m.type === EMarkerType.polygon);
+      toRemove.forEach((m) => m.marker.remove());
 
-    setMarkers(prev => {
-      const toRemove = prev.filter(m => m.type === EMarkerType.polygon);
-      toRemove.forEach(m => m.marker.remove());
-
-      return prev.filter(m => m.type !== EMarkerType.polygon);
+      return prev.filter((m) => m.type !== EMarkerType.polygon);
     });
-  }
+  };
 
   const handleSetStaticChart = () => {
     setShowChart(!showChart);
   };
 
   const handleStartDateChange = (a_Date: string) => {
-    setStartDate(a_Date)  
-  }
+    setStartDate(a_Date);
+  };
 
   const handleEndDateChange = (a_Date: string) => {
-    setEndDate(a_Date)  
-  }
+    setEndDate(a_Date);
+  };
 
   const handleRangeChange = (a_Range: string) => {
-    setCloudCover(a_Range)  
-  }
+    setCloudCover(a_Range);
+  };
   return (
     <div className={` ${sidebarStyles.wrapper}`}>
       <div className={` ${sidebarStyles.buttonsWrapper}`}>
@@ -112,7 +109,9 @@ const Sidebar = () => {
             <CButton
               title={"Clear Markers"}
               onButtonClick={handleClearPoint}
-              disable={markers.filter( m => m.type == EMarkerType.point ).length == 0}
+              disable={
+                markers.filter((m) => m.type == EMarkerType.point).length == 0
+              }
             />
           </div>
           <div className={` ${sidebarStyles.buttonRowWrapper}`}>
@@ -123,30 +122,23 @@ const Sidebar = () => {
             <CButton
               title={"Clear ROI"}
               onButtonClick={handleClearPolygon}
-              disable={markers.filter( m => m.type == EMarkerType.polygon ).length < 4}
+              disable={
+                markers.filter((m) => m.type == EMarkerType.polygon).length < 4
+              }
             />
           </div>
         </Section>
 
         <Section title="Start Date">
-          <DateInput
-            value={startDate}
-            onDateChange={handleStartDateChange}
-          />
+          <DateInput value={startDate} onDateChange={handleStartDateChange} />
         </Section>
 
         <Section title="End Date">
-          <DateInput
-            value={endDate}
-            onDateChange={handleEndDateChange}
-          />
+          <DateInput value={endDate} onDateChange={handleEndDateChange} />
         </Section>
 
         <Section title={`Cloud Cover - ${cloudCover}%`}>
-          <RangeInput 
-            value={cloudCover}
-            onRangeChange={handleRangeChange}
-          />
+          <RangeInput value={cloudCover} onRangeChange={handleRangeChange} />
         </Section>
 
         <Section title="ROI Coordinates">
@@ -157,10 +149,11 @@ const Sidebar = () => {
           <CButton
             title={!showChart ? "Static Chart" : "Hide Chart"}
             onButtonClick={handleSetStaticChart}
-            disable={markers.filter( m => m.type == EMarkerType.polygon ).length < 4}
+            disable={
+              markers.filter((m) => m.type == EMarkerType.polygon).length < 4
+            }
           />
         </Section>
-        
       </div>
     </div>
   );

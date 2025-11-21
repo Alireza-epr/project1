@@ -1,4 +1,4 @@
 export enum ECoordinate {
   longitude = "Longitude",
-  latitude = "Latitude"
+  latitude = "Latitude",
 }
