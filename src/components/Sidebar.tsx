@@ -17,6 +17,9 @@ const Sidebar = () => {
   const showChart = useMapStore((state) => state.showChart);
   const setShowChart = useMapStore((state) => state.setShowChart);
 
+  const fetchFeatures = useMapStore((state) => state.fetchFeatures);
+  const setFetchFeatures = useMapStore((state) => state.setFetchFeatures);
+
   const startDate = useMapStore((state) => state.startDate);
   const setStartDate = useMapStore((state) => state.setStartDate);
 
@@ -82,8 +85,8 @@ const Sidebar = () => {
     });
   };
 
-  const handleSetStaticChart = () => {
-    setShowChart(!showChart);
+  const handleSetFetchFeatures = () => {
+    setFetchFeatures(!fetchFeatures);
   };
 
   const handleStartDateChange = (a_Date: string) => {
@@ -100,7 +103,7 @@ const Sidebar = () => {
   return (
     <div className={` ${sidebarStyles.wrapper}`}>
       <div className={` ${sidebarStyles.buttonsWrapper}`}>
-        <Section title="Drawing">
+        <Section title="Drawing" disabled={fetchFeatures}>
           <div className={` ${sidebarStyles.buttonRowWrapper}`}>
             <CButton
               title={!marker.point ? "Enable Marker" : "Disable Marker"}
@@ -129,26 +132,29 @@ const Sidebar = () => {
           </div>
         </Section>
 
-        <Section title="Start Date">
+        <Section title="Start Date" disabled={fetchFeatures}>
           <DateInput value={startDate} onDateChange={handleStartDateChange} />
         </Section>
 
-        <Section title="End Date">
+        <Section title="End Date" disabled={fetchFeatures}>
           <DateInput value={endDate} onDateChange={handleEndDateChange} />
         </Section>
 
-        <Section title={`Cloud Cover - ${cloudCover}%`}>
+        <Section
+          title={`Cloud Cover - ${cloudCover}%`}
+          disabled={fetchFeatures}
+        >
           <RangeInput value={cloudCover} onRangeChange={handleRangeChange} />
         </Section>
 
-        <Section title="ROI Coordinates">
+        <Section title="ROI Coordinates" disabled={fetchFeatures}>
           <Coordinates />
         </Section>
 
         <Section title="Chart">
           <CButton
-            title={!showChart ? "Static Chart" : "Hide Chart"}
-            onButtonClick={handleSetStaticChart}
+            title={!fetchFeatures ? "Show Chart" : "Hide Chart"}
+            onButtonClick={handleSetFetchFeatures}
             disable={
               markers.filter((m) => m.type == EMarkerType.polygon).length < 4
             }

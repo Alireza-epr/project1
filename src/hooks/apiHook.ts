@@ -1,23 +1,29 @@
-import { ESTACURLS, ISTACFilterRequest, ISTACFilterResponse } from "@/types/apiTypes";
-import { useEffect, useState } from "react";
+import { useMapStore } from "@/store/mapStore";
+import {
+  ESTACURLS,
+  ISTACFilterRequest,
+  ISTACFilterResponse,
+  IStacSearchResponse,
+} from "../types/apiTypes";
 
 export const useFilterSTAC = () => {
-  const [response, setResponse] = useState<ISTACFilterResponse | null>(null);
-  const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const setResponseFeatures = useMapStore((state) => state.setResponseFeatures);
+  const setErrorFeatures = useMapStore((state) => state.setErrorFeatures);
 
-  const fetchData = async (a_STACRequest: ISTACFilterRequest) => {
+  const getFeatures = async (a_STACRequest: ISTACFilterRequest) => {
+    const filterRequest = {
+      ...a_STACRequest,
+      limit: 20,
+    };
+
+    //console.log(new Date(Date.now()).toISOString()+" Get STAC Items")
     try {
-      setIsLoading(true);
-      setError(null);
-      setResponse(null);
-
       const resp = await fetch(ESTACURLS.searchURL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(a_STACRequest),
+        body: JSON.stringify(filterRequest),
       });
 
       if (!resp.ok) {
@@ -25,19 +31,13 @@ export const useFilterSTAC = () => {
       }
 
       const respJSON = await resp.json();
-      setResponse(respJSON);
+      setResponseFeatures(respJSON);
     } catch (err: any) {
-      setError(err);
-    } finally {
-      setIsLoading(false);
+      setErrorFeatures(err);
     }
   };
 
-
   return {
-    response,
-    error,
-    isLoading,
-    fetchData,
+    getFeatures,
   };
 };
