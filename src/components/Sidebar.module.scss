@@ -1,8 +1,12 @@
 .wrapper {
-  flex: 2 1 0px;
+  width: 30%;
   background-color: lightseagreen;
   position: relative;
-  display: flex;
+  height: auto;
+  scrollbar-color:lightgreen lightseagreen;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  max-height: 100%;
 }
 
 .buttonsWrapper {

@@ -80,11 +80,9 @@ const Sidebar = () => {
   const handleClearPoint = () => {
     setMarkers((prev) => {
       prev.forEach((m) => {
-        if (m.type === EMarkerType.point) {
-          m.marker.remove();
-        }
+        m.marker.remove();
       });
-      return prev.filter((m) => m.type !== EMarkerType.point);
+      return [];
     });
   };
 
@@ -135,29 +133,23 @@ const Sidebar = () => {
       <div className={` ${sidebarStyles.buttonsWrapper}`}>
         <Section title="Drawing" disabled={fetchFeatures}>
           <div className={` ${sidebarStyles.buttonRowWrapper}`}>
-            <CButton
+            {/* <CButton
               title={!marker.point ? "Enable Marker" : "Disable Marker"}
               onButtonClick={handlePointClick}
+            /> */}
+            <CButton
+              title={"Marker"}
+              active={marker.polygon}
+              onButtonClick={handlePolygonClick}
+              icon="marker-add"
             />
             <CButton
               title={"Clear Markers"}
               onButtonClick={handleClearPoint}
               disable={
-                markers.filter((m) => m.type == EMarkerType.point).length == 0
+                markers.length == 0
               }
-            />
-          </div>
-          <div className={` ${sidebarStyles.buttonRowWrapper}`}>
-            <CButton
-              title={!marker.polygon ? "Enable ROI" : "Disable ROI"}
-              onButtonClick={handlePolygonClick}
-            />
-            <CButton
-              title={"Clear ROI"}
-              onButtonClick={handleClearPolygon}
-              disable={
-                markers.filter((m) => m.type == EMarkerType.polygon).length < 4
-              }
+              icon="marker-clear"
             />
           </div>
         </Section>
@@ -217,7 +209,7 @@ const Sidebar = () => {
           />
         </Section>
 
-        <Section title="ROI Coordinates" disabled={fetchFeatures}>
+        <Section title="ROI" disabled={fetchFeatures}>
           <Coordinates />
         </Section>
       </div>

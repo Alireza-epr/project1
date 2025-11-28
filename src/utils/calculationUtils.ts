@@ -124,3 +124,42 @@ export const getMeanNDVI = (
     ? { NDVI: sum / count, datetime: date }
     : { NDVI: null, datetime: date };
 };
+
+export const validateImportedROI = (a_JSON: any) => {
+    // 1. Must contain "coordinates"
+    if (!a_JSON || !a_JSON.coordinates) {
+        return { valid: false, message: "Missing 'coordinates' key" };
+    }
+
+    const coords = a_JSON.coordinates;
+
+    // 2. coordinates must be an array
+    if (!Array.isArray(coords)) {
+        return { valid: false, message: "'coordinates' must be an array" };
+    }
+
+    // 3. Validate each coordinate pair
+    for (let i = 0; i < coords.length; i++) {
+        const pair = coords[i];
+
+        if (
+            !Array.isArray(pair) ||
+            pair.length !== 2 ||
+            typeof pair[0] !== "number" ||
+            typeof pair[1] !== "number"
+        ) {
+            return {
+                valid: false,
+                message: `Invalid coordinate at index ${i}. Expected [number, number].`
+            };
+        }
+    }
+
+    // 4. Ensure at least 4 coordinate points
+    if (coords.length < 4) {
+        return { valid: false, message: "Minimum 4 coordinates required" };
+    }
+
+    return { valid: true };
+};
+ 
