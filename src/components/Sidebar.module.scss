@@ -1,20 +1,13 @@
 .wrapper {
-  width: 30%;
+  flex: 2 1 0px;
   background-color: lightseagreen;
   position: relative;
-  padding: 1.5vh;
-  height: 100%;
-  max-height: 100%;
-  scrollbar-color:lightgreen lightseagreen;
-  overflow-y: scroll;
   display: flex;
-  flex-direction: column;
 }
 
 .buttonsWrapper {
   flex: 1 1 0px;
   display: flex;
-  gap: 2%;
   flex-direction: column;
   border-radius: 16px;
 }

@@ -6,22 +6,23 @@
 body {
   padding: 0;
   margin: 0;
-  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+  background-color: lightseagreen;
 }
 
 #root {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: lightseagreen;
 }
 
 .app-wrapper {
   position: relative;
   width: 100vw;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
+
 }
 
 .app-header {
@@ -34,5 +35,8 @@ body {
   width: 100%;
   flex: 9 1 1px;
   display: flex;
+  gap:1.5vh;
+  flex-direction: row nowrap;
+  padding: 0 1.5vh;
 }
 
