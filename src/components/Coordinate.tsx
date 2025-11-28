@@ -6,7 +6,7 @@ export interface ICoordinateProps {
   lngLat: [number, number];
   id: number | string;
   disabled?: boolean;
-  onCoordinateChange: (
+  onCoordinateChange?: (
     id: number | string,
     coordinate: ECoordinate,
     value: string,
@@ -18,7 +18,7 @@ const Coordinate = (props: ICoordinateProps) => {
     a_Value: React.ChangeEvent<HTMLInputElement>,
     a_Coordinate: ECoordinate,
   ) => {
-    if (!props.disabled) {
+    if (!props.disabled && props.onCoordinateChange) {
       props.onCoordinateChange(props.id, a_Coordinate, a_Value.target.value);
     }
   };
