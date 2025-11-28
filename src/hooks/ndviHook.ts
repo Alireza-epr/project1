@@ -35,9 +35,11 @@ export const useNDVI = () => {
     }[] = [];
     let countId = 1;
 
+    const sortedFeatures = a_Features.reverse()
+
     try {
       setDoneFeature(1);
-      for (const feature of a_Features) {
+      for (const feature of sortedFeatures) {
         //console.log(new Date(Date.now()).toISOString()+" Start Calculating NDVI for STAC Item id "+ feature.id)
 
         for (const bandKey of bandKeys) {
