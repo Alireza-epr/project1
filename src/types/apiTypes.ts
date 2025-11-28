@@ -34,6 +34,23 @@ export type TSpatialComparison =
   | "s_overlaps"
   | "s_touches";
 
+export interface ISpatialItem { 
+  title: string; 
+  value: TSpatialComparison 
+}
+export const spatialItems: ISpatialItem[] = [
+  { title: "Contains", value: "s_contains" },
+  { title: "Intersects", value: "s_intersects" },
+  { title: "Within", value: "s_within" },
+  { title: "Crosses", value: "s_crosses" },
+  { title: "Disjoint", value: "s_disjoint" },
+  { title: "Equals", value: "s_equals" },
+  { title: "Overlaps", value: "s_overlaps" },
+  { title: "Touches", value: "s_touches" },
+];
+
+
+
 export type TTemporalComparison =
   | "t_starts"
   | "t_startedby"
@@ -51,6 +68,17 @@ export type TTemporalComparison =
   | "t_contains"
   | "t_after";
 
+
+export interface ITemporalItem {
+  title: string,
+  value: TTemporalComparison
+}
+export const temporalItems: ITemporalItem[] = [
+  { title: "During", value: "t_during" },
+  { title: "After Start", value: "t_after" },
+  { title: "Before End", value: "t_before" },
+];
+
 // CloudCover
 export type TCloudCoverArgs = [
   {
@@ -62,6 +90,20 @@ export type TCloudCoverArgs = [
 export type TCloudCoverFilter = {
   op: TComparisonOperators;
   args: TCloudCoverArgs;
+};
+
+// Snowcover
+export type TSnowCoverArgs = [
+  {
+    //property: "eo:snow_cover";
+    property: "s2:snow_ice_percentage";
+  },
+  number,
+  number?,
+];
+export type TSnowCoverFilter = {
+  op: TComparisonOperators;
+  args: TSnowCoverArgs;
 };
 
 // DateTime
@@ -114,12 +156,14 @@ export interface ISTACFilterOP {
 
 export interface ISTACFilter {
   op: TLogicalOperators;
-  args: (TCloudCoverFilter | TDateTimeFilter | TIdFilter | TSpatialFilter)[];
+  args: (TCloudCoverFilter | TSnowCoverFilter | TDateTimeFilter | TIdFilter | TSpatialFilter)[];
 }
 
 export interface ISTACFilterRequest {
   collections: [ESTACCollections];
   filter?: ISTACFilter;
+  datetime?: string;
+  limit?: number
 }
 
 export interface ISTACResponseLink {

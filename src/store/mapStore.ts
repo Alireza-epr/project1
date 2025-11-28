@@ -3,7 +3,7 @@ import { getLocaleISOString } from "../utils/dateUtils";
 import { Marker, Subscription } from "maplibre-gl";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
-import { IStacSearchResponse, ITokenCollection } from "@/types/apiTypes";
+import { IStacSearchResponse, ITokenCollection, spatialItems, temporalItems, TSpatialComparison, TTemporalComparison } from "@/types/apiTypes";
 
 export enum EMarkerType {
   point = "point",
@@ -28,6 +28,8 @@ export interface IMapStoreStates {
   startDate: string;
   endDate: string;
   cloudCover: string;
+  snowCover: string;
+  limit: string;
   showChart: boolean;
   showError: boolean;
   fetchFeatures: boolean;
@@ -37,6 +39,8 @@ export interface IMapStoreStates {
   errorFeatures: Error | null;
   tokenCollection: ITokenCollection | null;
   doneFeature: number;
+  temporalOp: TTemporalComparison;
+  spatialOp: TSpatialComparison;
 }
 
 export interface IMapStoreActions {
@@ -46,6 +50,7 @@ export interface IMapStoreActions {
   setStartDate: (a_Start: string | ((prev: string) => string)) => void;
   setEndDate: (a_End: string | ((prev: string) => string)) => void;
   setCloudCover: (a_CloudCover: string | ((a_Prev: string) => string)) => void;
+  setSnowCover: (a_SnowCover: string | ((a_Prev: string) => string)) => void;
   setShowChart: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setShowError: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setFetchFeatures: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
@@ -67,6 +72,9 @@ export interface IMapStoreActions {
       | ((prev: ITokenCollection | null) => ITokenCollection | null),
   ) => void;
   setDoneFeature: (a_Value: number | ((prev: number) => number)) => void;
+  setLimit: (a_Value: string | ((prev: string) => string)) => void;
+  setTemporalOp: (a_Start: TTemporalComparison | ((prev: TTemporalComparison) => TTemporalComparison)) => void;
+  setSpatialOp: (a_Start: TSpatialComparison | ((prev: TSpatialComparison) => TSpatialComparison)) => void;
 }
 
 export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
@@ -84,7 +92,11 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
         value: 1,
       }), // 2025-09-31T14:43:33
       endDate: getLocaleISOString(new Date()), // 2025-10-31T14:43:33
-      cloudCover: "65",
+      cloudCover: "30",
+      snowCover: "50",
+      limit: "20",
+      spatialOp: spatialItems[0].value,
+      temporalOp: temporalItems[0].value,
       //features
       tokenCollection: null as ITokenCollection | null,
       fetchFeatures: false,
@@ -139,6 +151,14 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
               : a_Value,
         })),
 
+      setLimit: (a_Value: string | ((a_Prev: string) => string)) =>
+        set((state) => ({
+          limit:
+            typeof a_Value === "function"
+              ? a_Value(state.limit)
+              : a_Value,
+        })),
+
       setEndDate: (a_End: string | ((a_Prev: string) => string)) =>
         set((state) => ({
           endDate: typeof a_End === "function" ? a_End(state.endDate) : a_End,
@@ -150,6 +170,14 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
             typeof a_CloudCover === "function"
               ? a_CloudCover(state.cloudCover)
               : a_CloudCover,
+        })),
+      
+      setSnowCover: (a_SnowCover: string | ((a_Prev: string) => string)) =>
+        set((state) => ({
+          snowCover:
+            typeof a_SnowCover === "function"
+              ? a_SnowCover(state.snowCover)
+              : a_SnowCover,
         })),
 
       setShowChart: (a_Value: boolean | ((prev: boolean) => boolean)) =>
@@ -204,6 +232,18 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
             typeof a_Value === "function"
               ? a_Value(state.errorFeatures)
               : a_Value,
+        })),
+
+      setTemporalOp: (a_Value) =>
+        set((state) => ({
+          temporalOp:
+            typeof a_Value === "function" ? a_Value(state.temporalOp) : a_Value,
+        })),
+      
+      setSpatialOp: (a_Value) =>
+        set((state) => ({
+          spatialOp:
+            typeof a_Value === "function" ? a_Value(state.spatialOp) : a_Value,
         })),
     }),
   ),

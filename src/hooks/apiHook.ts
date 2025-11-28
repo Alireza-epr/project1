@@ -11,10 +11,6 @@ export const useFilterSTAC = () => {
   const setErrorFeatures = useMapStore((state) => state.setErrorFeatures);
 
   const getFeatures = async (a_STACRequest: ISTACFilterRequest) => {
-    const filterRequest = {
-      ...a_STACRequest,
-      limit: 20,
-    };
 
     //console.log(new Date(Date.now()).toISOString()+" Get STAC Items")
     try {
@@ -23,7 +19,7 @@ export const useFilterSTAC = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(filterRequest),
+        body: JSON.stringify(a_STACRequest),
       });
 
       if (!resp.ok) {

@@ -21,6 +21,7 @@ import {
   TComparisonOperators,
   TDateTimeFilter,
   TLogicalOperators,
+  TSnowCoverFilter,
   TSpatialComparison,
   TSpatialFilter,
   TTemporalComparison,
@@ -42,6 +43,7 @@ const Map = () => {
   const startDate = useMapStore((state) => state.startDate);
   const endDate = useMapStore((state) => state.endDate);
   const cloudCover = useMapStore((state) => state.cloudCover);
+  const snowCover = useMapStore((state) => state.snowCover);
   const markers = useMapStore((state) => state.markers);
   const showChart = useMapStore((state) => state.showChart);
   const showError = useMapStore((state) => state.showError);
@@ -52,6 +54,9 @@ const Map = () => {
   const errorFeatures = useMapStore((state) => state.errorFeatures);
   const tokenCollection = useMapStore((state) => state.tokenCollection);
   const doneFeature = useMapStore((state) => state.doneFeature);
+  const temporalOp = useMapStore((state) => state.temporalOp);
+  const spatialOp = useMapStore((state) => state.spatialOp);
+  const limit = useMapStore((state) => state.limit);
 
   const setTokenCollection = useMapStore((state) => state.setTokenCollection);
   const setMarkers = useMapStore((state) => state.setMarkers);
@@ -436,6 +441,15 @@ const Map = () => {
           Number(cloudCover),
         ],
       };
+      const snowCoverFilter: TSnowCoverFilter = {
+        op: "<=",
+        args: [
+          {
+            property: "s2:snow_ice_percentage",
+          },
+          Number(snowCover),
+        ],
+      };
       const datetimeFilter: TDateTimeFilter = {
         op: "t_during",
         args: [
@@ -448,7 +462,7 @@ const Map = () => {
         ],
       };
       const geometryFilter: TSpatialFilter = {
-        op: "s_contains",
+        op: spatialOp,
         args: [
           {
             property: "geometry",
@@ -460,13 +474,31 @@ const Map = () => {
         ],
       };
 
+      let temporalFilter = ''
+
+      switch(temporalOp){
+        case "t_during":
+          temporalFilter = `${startDate.substring(0, startDate.indexOf("T"))}/${endDate.substring(0, endDate.indexOf("T"))}`
+          break;
+        case "t_after":
+          temporalFilter = `${startDate.substring(0, startDate.indexOf("T"))}/`
+          break;
+        case "t_before":
+          temporalFilter = `/${endDate.substring(0, endDate.indexOf("T"))}`
+          break;
+      }
+
       const postBody: ISTACFilterRequest = {
         collections: [ESTACCollections.Sentinel2l2a],
         filter: {
           op: "and",
-          args: [cloudCoverFilter, datetimeFilter, geometryFilter],
+          args: [cloudCoverFilter, snowCoverFilter, geometryFilter],
         },
+        datetime: temporalFilter,
+        limit: Number(limit)
       };
+      console.log("Request")
+      console.log(postBody)
       showLoadingModal();
       resetStates();
       getFeatures(postBody);
@@ -480,7 +512,7 @@ const Map = () => {
     if (errorFeatures) {
       console.error("Failed to get features");
       console.error(errorFeatures);
-      resetStates();
+      //resetStates();
       showErrorModal();
     }
   }, [errorFeatures]);
@@ -564,7 +596,13 @@ const Map = () => {
         <Chart onClose={handleCloseChart}>
           <div className={` ${mapStyle.errorWrapper}`}>
             <div className={` ${mapStyle.error}`}>
-              Problem by getting NDVI samples
+              {
+                responseFeatures && responseFeatures.features && responseFeatures?.features.length == 0
+                ?
+                "No STAC Item found!"
+                :
+                "Problem by getting NDVI samples!"
+              }
             </div>
           </div>
         </Chart>

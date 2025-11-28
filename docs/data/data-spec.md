@@ -95,6 +95,8 @@ Protocol: POST
 
 Endpoints: /search
 
+Ref: https://planetarycomputer.microsoft.com/api/stac/v1/queryables
+
 ```js
 https://planetarycomputer.microsoft.com/api/stac/v1/search
 
