@@ -158,16 +158,27 @@ export const computeFeatureNDVI = (
   const r = toFloat32Array(a_Red);
   const n = toFloat32Array(a_Nir);
   const scl = a_SCL;
+  let len = r.length
+  const ndvi = new Float32Array(len);
 
-  const ndvi = new Float32Array(r.length);
-
-  for (let i = 0; i < r.length; i++) {
+  let validPixels = 0
+  let notValidPixels = 0
+  
+  for (let i = 0; i < len; i++) {
     if(isGoodPixel(scl[i])){
+      ++validPixels
       ndvi[i] = (n[i] - r[i]) / (n[i] + r[i]);
     } else {
+      ++notValidPixels
       ndvi[i] = NaN
     }
   }
+  const validPixelsPercentage =( validPixels / len ) * 100
+  const coverageThreshold = 0.7
+  if(validPixelsPercentage < coverageThreshold){
+    throw new Error(`Scene rejected: ${validPixelsPercentage.toFixed(2)}% valid pixels (required ≥ ${coverageThreshold}%).`)
+  }
+  
 
   return ndvi;
 };
@@ -264,10 +275,12 @@ export const upscaleSCL = (scl: number | TypedArray, sclWidth: number, sclHeight
 
 export const isGoodPixel = (sclValue: number) => {
   
-  const bad = new Set([3,6,9]);
+  const bad = new Set([3,6,8,9,10]);
   //3 - CLOUD_SHADOWS
   //6 - WATER
+  //8 - CLOUD_MEDIUM_PROBABILITY
   //9 - CLOUD_HIGH_PROBABILITY
+  //10 - THIN_CIRRUS
   return !bad.has(sclValue); 
   const noBad = new Set([0,1,2,3,4,5,6,8,9,10,11]);
   return noBad.has(sclValue)

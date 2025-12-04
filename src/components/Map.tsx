@@ -49,6 +49,7 @@ const Map = () => {
   const samples = useMapStore((state) => state.samples);
   const responseFeatures = useMapStore((state) => state.responseFeatures);
   const errorFeatures = useMapStore((state) => state.errorFeatures);
+  const errorNDVI = useMapStore((state) => state.errorNDVI);
   const tokenCollection = useMapStore((state) => state.tokenCollection);
   const doneFeature = useMapStore((state) => state.doneFeature);
   const temporalOp = useMapStore((state) => state.temporalOp);
@@ -71,6 +72,7 @@ const Map = () => {
   const setGlobalLoading = useMapStore((state) => state.setGlobalLoading);
   const setResponseFeatures = useMapStore((state) => state.setResponseFeatures);
   const setErrorFeatures = useMapStore((state) => state.setErrorFeatures);
+  const setErrorNDVI = useMapStore((state) => state.setErrorNDVI);
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapObject = useRef<MapLibre | null>(null);
@@ -657,6 +659,16 @@ const Map = () => {
       //showErrorModal()
     }
   }, [tokenCollection]);
+  useEffect(() => {
+    if (errorNDVI) {
+      console.error("Failed to calculate NDVI");
+      console.error(errorNDVI);
+      //resetStates();
+      setNextPage(null)
+      setPreviousPage(null)
+      showErrorModal();
+    }
+  }, [errorNDVI]);
 
   // 4. Show Chart
   useEffect(() => {

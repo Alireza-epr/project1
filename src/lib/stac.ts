@@ -85,8 +85,10 @@ export const useFilterSTAC = () => {
 export const useNDVI = () => {
   const tokenCollection = useMapStore((state) => state.tokenCollection);
   const setSamples = useMapStore((state) => state.setSamples);
+  const setNotValidSamples = useMapStore((state) => state.setNotValidSamples);
   const doneFeature = useMapStore((state) => state.doneFeature);
   const setDoneFeature = useMapStore((state) => state.setDoneFeature);
+  const setErrorNDVI = useMapStore((state) => state.setErrorNDVI);
 
   const getNDVI = async (
     a_Features: IStacItem[],
@@ -107,9 +109,9 @@ export const useNDVI = () => {
     }[] = [];
     let countId = 1;
 
-    try {
-      setDoneFeature(1);
-      for (const feature of a_Features) {
+    setDoneFeature(1);
+    for (const feature of a_Features) {
+      try {
         //console.log(new Date(Date.now()).toISOString()+" Start Calculating NDVI for STAC Item id "+ feature.id)
         const cacheKey = `${JSON.stringify(a_Coordinates)}_${feature.id}`
         if(cache.getCache(cacheKey)){
@@ -175,22 +177,30 @@ export const useNDVI = () => {
           cache.setCache(cacheKey,{ ...featureMeanNDVI, id: countId })
           meanNDVIs.push({ ...featureMeanNDVI, id: countId });
         } else {
-          meanNDVIs.push({
-            id: countId,
-            NDVI: null,
-            datetime: feature.properties.datetime,
-          });
+          throw new Error("Scene rejected: rasters are undefined")
         }
         
         ++countId;
         setDoneFeature((prev) => ++prev);
+      } catch (error: any) {
+        meanNDVIs.push({
+          id: countId,
+          NDVI: null,
+          datetime: feature.properties.datetime,
+        });
+        console.error(error);
+        ++countId;
+        setDoneFeature((prev) => ++prev);
+        continue    
       }
-
-      setSamples(meanNDVIs);
-    } catch (error) {
-      setSamples([]);
-      console.error("useNDVI error");
-      console.error(error);
+    } 
+    const validSamples = meanNDVIs.filter( m => m.NDVI )
+    const notValidSamples = meanNDVIs.filter( m => !m.NDVI )
+    setNotValidSamples(notValidSamples)
+    if(validSamples.length > 0){
+      setSamples(validSamples);
+    } else {
+      setErrorNDVI(new Error("No valid scene"))
     }
   };
 

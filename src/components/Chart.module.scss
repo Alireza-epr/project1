@@ -68,9 +68,10 @@
     padding: 16px;
     border-radius: 16px;
     color: white;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     justify-content: center;
     align-items: center;
+    min-width: 0;
 }
 
 .footerItemTitle {
@@ -83,6 +84,10 @@
 
 .footerItemValue {
     flex: 1 1 0px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 50%;
 }
 
 .arrow {

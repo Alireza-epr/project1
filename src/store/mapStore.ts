@@ -35,8 +35,10 @@ export interface IMapStoreStates {
   fetchFeatures: boolean;
   globalLoading: boolean;
   samples: INDVISample[];
+  notValidSamples: INDVISample[];
   responseFeatures: IStacSearchResponse | null;
   errorFeatures: Error | null;
+  errorNDVI: Error | null;
   tokenCollection: ITokenCollection | null;
   doneFeature: number;
   temporalOp: TTemporalComparison;
@@ -62,12 +64,18 @@ export interface IMapStoreActions {
   setSamples: (
     a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
   ) => void;
+  setNotValidSamples: (
+    a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
+  ) => void;
   setResponseFeatures: (
     a_Value:
       | (IStacSearchResponse | null)
       | ((prev: IStacSearchResponse | null) => IStacSearchResponse | null),
   ) => void;
   setErrorFeatures: (
+    a_Value: (Error | null) | ((prev: Error | null) => Error | null),
+  ) => void;
+  setErrorNDVI: (
     a_Value: (Error | null) | ((prev: Error | null) => Error | null),
   ) => void;
   setTokenCollection: (
@@ -114,6 +122,7 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       fetchFeatures: false,
       responseFeatures: null as IStacSearchResponse | null,
       errorFeatures: null as Error | null,
+      errorNDVI: null as Error | null,
       showChart: false,
       showError: false,
       globalLoading: false,
@@ -123,6 +132,7 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       previousPage: null as StacLink | null,
       //NDVI
       samples: [] as INDVISample[],
+      notValidSamples: [] as INDVISample[]
     },
     (set) => ({
       // Actions
@@ -246,6 +256,14 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
               ? a_Samples(state.samples)
               : a_Samples,
         })),
+      
+      setNotValidSamples: ( a_Samples ) =>
+        set((state) => ({
+          notValidSamples:
+            typeof a_Samples === "function"
+              ? a_Samples(state.notValidSamples)
+              : a_Samples,
+        })),
 
       setGlobalLoading: (a_Value: boolean | ((prev: boolean) => boolean)) =>
         set((state) => ({
@@ -268,6 +286,14 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
           errorFeatures:
             typeof a_Value === "function"
               ? a_Value(state.errorFeatures)
+              : a_Value,
+        })),
+
+      setErrorNDVI: (a_Value) =>
+        set((state) => ({
+          errorNDVI:
+            typeof a_Value === "function"
+              ? a_Value(state.errorNDVI)
               : a_Value,
         })),
 
