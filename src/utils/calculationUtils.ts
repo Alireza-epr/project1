@@ -1,5 +1,6 @@
 import { ESTACURLS, ITokenCollection } from "@/types/apiTypes";
-import { fromUrl, TypedArray } from "geotiff";
+import GeoTIFF, { fromUrl, GeoTIFFImage, TypedArray } from "geotiff";
+import proj4 from "proj4";
 
 export const getFeatureToken = async (
   a_Id: string,
@@ -46,18 +47,23 @@ export const readBandCOG = async (
   //console.log(new Date(Date.now()).toISOString()+ " getImage start")
   const image = await tiff.getImage();
   //console.log(new Date(Date.now()).toISOString()+ " readRasters start")
-  const window = LngLatToPixel(
+  /* const window = lngLatToPixel2(
     a_Coordinates,
     a_ItemBBOX,
     image.getWidth(),
     image.getHeight(),
+  ); */
+  
+  const window = lngLatToPixel(
+    a_Coordinates,
+    image
   );
   const raster = await image.readRasters({ window });
   //console.log(new Date(Date.now()).toISOString()+ " readRasters end")
   return raster;
 };
 
-export const LngLatToPixel = (
+export const lngLatToPixel2 = (
   a_ROILngLat: [number, number][],
   a_STACItemBBox: [number, number, number, number],
   a_Width: number,
@@ -76,8 +82,67 @@ export const LngLatToPixel = (
   const x1 = Math.max(...xs);
   const y0 = Math.min(...ys);
   const y1 = Math.max(...ys);
+  //const p1 = pixelToLngLat(x0, y0, a_STACItemBBox, a_Width, a_Height);
+  //const p2 = pixelToLngLat(x1, y1, a_STACItemBBox, a_Width, a_Height);
 
   return [x0, y0, x1, y1];
+};
+
+export const lngLatToPixel = (
+  a_ROILngLat: [number, number][],
+  a_Image: GeoTIFFImage
+) => {
+  // 1. MapLibre gives coordinates in WGS84 / EPSG:4326 (lon/lat in degrees).
+  // 2. GeoTIFF (e.g., Sentinel-2) is projected in UTM / EPSG:32632 (meters)
+  // so conversion is required to transform MapLibre coordinates to the same projection before computing pixel indices.
+
+  // Get the first tiepoint (top-left corner in projected coords)
+  const tie = a_Image.getTiePoints()[0]; // {x, y, z, i, j, k}
+  const originX = tie.x;
+  const originY = tie.y;
+
+  // Get pixel resolution
+  const [resX, resY] = a_Image.getResolution(); // resX > 0, resY < 0
+  const projection = a_Image.getGeoKeys().ProjectedCSTypeGeoKey
+    ? `EPSG:${a_Image.getGeoKeys().ProjectedCSTypeGeoKey}`
+    : "EPSG:4326"; // fallback
+
+  // Transform each coordinate from WGS84 to TIFF CRS
+  const pixels = a_ROILngLat.map(([lon, lat]) => {
+    // Convert MapLibre lon/lat (degrees) → GeoTIFF CRS (meters) for pixel calculation
+    const [x, y] = proj4("EPSG:4326", projection, [lon, lat]); // lon/lat -> projected
+    const px = Math.floor((x - originX) / resX);
+    const py = Math.floor((originY - y) / Math.abs(resY));
+    // px, py = column (width) and row (height) of the pixel in the raster grid
+    return [px, py];
+  });
+
+  // Compute window bounding box
+  const xs = pixels.map(([px]) => px);
+  const ys = pixels.map(([_, py]) => py);
+
+  const x0 = Math.min(...xs);
+  const x1 = Math.max(...xs);
+  const y0 = Math.min(...ys);
+  const y1 = Math.max(...ys);
+
+  return [x0, y0, x1, y1];
+
+}
+
+export const pixelToLngLat = (
+  x: number,
+  y: number,
+  bbox: [number, number, number, number],
+  width: number,
+  height: number
+) => {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+
+  const lng = minLon + (x / width) * (maxLon - minLon);
+  const lat = maxLat - (y / height) * (maxLat - minLat);
+
+  return { lng, lat };
 };
 
 export const toFloat32Array = (a_Arr: TypedArray): Float32Array => {

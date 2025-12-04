@@ -111,10 +111,10 @@ export const useNDVI = () => {
       setDoneFeature(1);
       for (const feature of a_Features) {
         //console.log(new Date(Date.now()).toISOString()+" Start Calculating NDVI for STAC Item id "+ feature.id)
-        
-        if(cache.getCache(feature.id)){
+        const cacheKey = `${JSON.stringify(a_Coordinates)}_${feature.id}`
+        if(cache.getCache(cacheKey)){
           console.log("Cached NDVI")
-          const cachedFeature = cache.getCache(feature.id)
+          const cachedFeature = cache.getCache(cacheKey)
           console.log(cachedFeature)
           meanNDVIs.push(cachedFeature);
           ++countId;
@@ -172,7 +172,7 @@ export const useNDVI = () => {
           //console.log(new Date(Date.now()).toISOString()+" NDVI for "+ feature.id)
 
 
-          cache.setCache(feature.id,{ ...featureMeanNDVI, id: countId })
+          cache.setCache(cacheKey,{ ...featureMeanNDVI, id: countId })
           meanNDVIs.push({ ...featureMeanNDVI, id: countId });
         } else {
           meanNDVIs.push({
