@@ -1,5 +1,6 @@
 import { ESTACURLS, ITokenCollection } from "@/types/apiTypes";
-import { fromUrl, TypedArray } from "geotiff";
+import GeoTIFF, { fromUrl, GeoTIFFImage, TypedArray } from "geotiff";
+import proj4 from "proj4";
 
 export const getFeatureToken = async (
   a_Id: string,
@@ -42,25 +43,27 @@ export const readBandCOG = async (
   a_ItemBBOX: [number, number, number, number],
 ) => {
   //console.log(new Date(Date.now()).toISOString()+ " fromURL start")
-  if (a_Url.length == 0) {
-    return null;
-  }
   const tiff = await fromUrl(a_Url);
   //console.log(new Date(Date.now()).toISOString()+ " getImage start")
   const image = await tiff.getImage();
   //console.log(new Date(Date.now()).toISOString()+ " readRasters start")
-  const window = LngLatToPixel(
+  /* const window = lngLatToPixel2(
     a_Coordinates,
     a_ItemBBOX,
     image.getWidth(),
     image.getHeight(),
+  ); */
+  
+  const window = lngLatToPixel(
+    a_Coordinates,
+    image
   );
-  const [raster] = await image.readRasters({ window });
+  const raster = await image.readRasters({ window });
   //console.log(new Date(Date.now()).toISOString()+ " readRasters end")
   return raster;
 };
 
-export const LngLatToPixel = (
+export const lngLatToPixel2 = (
   a_ROILngLat: [number, number][],
   a_STACItemBBox: [number, number, number, number],
   a_Width: number,
@@ -79,8 +82,67 @@ export const LngLatToPixel = (
   const x1 = Math.max(...xs);
   const y0 = Math.min(...ys);
   const y1 = Math.max(...ys);
+  //const p1 = pixelToLngLat(x0, y0, a_STACItemBBox, a_Width, a_Height);
+  //const p2 = pixelToLngLat(x1, y1, a_STACItemBBox, a_Width, a_Height);
 
   return [x0, y0, x1, y1];
+};
+
+export const lngLatToPixel = (
+  a_ROILngLat: [number, number][],
+  a_Image: GeoTIFFImage
+) => {
+  // 1. MapLibre gives coordinates in WGS84 / EPSG:4326 (lon/lat in degrees).
+  // 2. GeoTIFF (e.g., Sentinel-2) is projected in UTM / EPSG:32632 (meters)
+  // so conversion is required to transform MapLibre coordinates to the same projection before computing pixel indices.
+
+  // Get the first tiepoint (top-left corner in projected coords)
+  const tie = a_Image.getTiePoints()[0]; // {x, y, z, i, j, k}
+  const originX = tie.x;
+  const originY = tie.y;
+
+  // Get pixel resolution
+  const [resX, resY] = a_Image.getResolution(); // resX > 0, resY < 0
+  const projection = a_Image.getGeoKeys().ProjectedCSTypeGeoKey
+    ? `EPSG:${a_Image.getGeoKeys().ProjectedCSTypeGeoKey}`
+    : "EPSG:4326"; // fallback
+
+  // Transform each coordinate from WGS84 to TIFF CRS
+  const pixels = a_ROILngLat.map(([lon, lat]) => {
+    // Convert MapLibre lon/lat (degrees) → GeoTIFF CRS (meters) for pixel calculation
+    const [x, y] = proj4("EPSG:4326", projection, [lon, lat]); // lon/lat -> projected
+    const px = Math.floor((x - originX) / resX);
+    const py = Math.floor((originY - y) / Math.abs(resY));
+    // px, py = column (width) and row (height) of the pixel in the raster grid
+    return [px, py];
+  });
+
+  // Compute window bounding box
+  const xs = pixels.map(([px]) => px);
+  const ys = pixels.map(([_, py]) => py);
+
+  const x0 = Math.min(...xs);
+  const x1 = Math.max(...xs);
+  const y0 = Math.min(...ys);
+  const y1 = Math.max(...ys);
+
+  return [x0, y0, x1, y1];
+
+}
+
+export const pixelToLngLat = (
+  x: number,
+  y: number,
+  bbox: [number, number, number, number],
+  width: number,
+  height: number
+) => {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+
+  const lng = minLon + (x / width) * (maxLon - minLon);
+  const lat = maxLat - (y / height) * (maxLat - minLat);
+
+  return { lng, lat };
 };
 
 export const toFloat32Array = (a_Arr: TypedArray): Float32Array => {
@@ -91,15 +153,32 @@ export const toFloat32Array = (a_Arr: TypedArray): Float32Array => {
 export const computeFeatureNDVI = (
   a_Red: TypedArray,
   a_Nir: TypedArray,
+  a_SCL: TypedArray,
 ): Float32Array => {
   const r = toFloat32Array(a_Red);
   const n = toFloat32Array(a_Nir);
+  const scl = a_SCL;
+  let len = r.length
+  const ndvi = new Float32Array(len);
 
-  const ndvi = new Float32Array(r.length);
-
-  for (let i = 0; i < r.length; i++) {
-    ndvi[i] = (n[i] - r[i]) / (n[i] + r[i]);
+  let validPixels = 0
+  let notValidPixels = 0
+  
+  for (let i = 0; i < len; i++) {
+    if(isGoodPixel(scl[i])){
+      ++validPixels
+      ndvi[i] = (n[i] - r[i]) / (n[i] + r[i]);
+    } else {
+      ++notValidPixels
+      ndvi[i] = NaN
+    }
   }
+  const validPixelsPercentage =( validPixels / len ) * 100
+  const coverageThreshold = 0.7
+  if(validPixelsPercentage < coverageThreshold){
+    throw new Error(`Scene rejected: ${validPixelsPercentage.toFixed(2)}% valid pixels (required ≥ ${coverageThreshold}%).`)
+  }
+  
 
   return ndvi;
 };
@@ -163,3 +242,81 @@ export const validateImportedROI = (a_JSON: any) => {
     return { valid: true };
 };
  
+export const upscaleSCL = (scl: number | TypedArray, sclWidth: number, sclHeight: number, targetWidth: number, targetHeight: number) => {
+  const out = new Uint8Array(targetWidth * targetHeight);
+
+  // Compute scale ratios between target (red) and source (scl)
+  const scaleX = targetWidth / sclWidth;    // e.g., 2/1 = 2
+  const scaleY = targetHeight / sclHeight;  // e.g., 3/2 = 1.5
+
+  for (let y = 0; y < targetHeight; y++) {
+    // Map high-res row back to low-res SCL row (nearest neighbor)
+    // Example: red rows 0,1,2 → scl rows 0,1,1
+    const srcY = Math.min(Math.floor(y / scaleY), sclHeight - 1);
+
+    for (let x = 0; x < targetWidth; x++) {
+      // Map high-res column back to low-res SCL column
+      // Example: red cols 0,1 → scl col 0
+      const srcX = Math.min(Math.floor(x / scaleX), sclWidth - 1);
+
+      // Index in the source SCL array
+      const srcIndex = srcY * sclWidth + srcX;
+
+      // Index in the output array
+      const dstIndex = y * targetWidth + x;
+
+      // Copy nearest SCL pixel
+      out[dstIndex] = scl[srcIndex];
+    }
+  }
+
+  return out;
+}
+
+export const isGoodPixel = (sclValue: number) => {
+  
+  const bad = new Set([3,6,8,9,10]);
+  //3 - CLOUD_SHADOWS
+  //6 - WATER
+  //8 - CLOUD_MEDIUM_PROBABILITY
+  //9 - CLOUD_HIGH_PROBABILITY
+  //10 - THIN_CIRRUS
+  return !bad.has(sclValue); 
+  const noBad = new Set([0,1,2,3,4,5,6,8,9,10,11]);
+  return noBad.has(sclValue)
+}
+
+const meterToDegreeOffsets = (a_Lat: number, a_Meters = 5) => {
+  // Earth radius approximation
+  const metersPerDegLat = 111320;
+  const metersPerDegLng = 111320 * Math.cos(a_Lat * Math.PI / 180);
+
+  const dy = a_Meters / metersPerDegLat;
+  const dx = a_Meters / metersPerDegLng;
+
+  return { dx, dy };
+}
+
+
+export const getLngLatsFromMarker = (a_LngLat: maplibregl.LngLat): [number, number][]=> {
+  
+  /* 
+  ( lng - dx , lat + dy ) ----> ( lng + dx , lat + dy )
+      ^                         |
+      |     (lng , lat)         |
+      |                         v
+  ( lng - dx , lat - dy ) <---- ( lng + dx , lat - dy ) 
+  */
+  const { lng, lat } = a_LngLat
+  const { dx, dy} = meterToDegreeOffsets(a_LngLat.lat) 
+
+  const lngLats: [number, number][] = [
+    [lng - dx , lat + dy],
+    [lng + dx , lat + dy],
+    [lng + dx , lat - dy],
+    [lng - dx , lat - dy]
+  ]
+
+  return lngLats
+
+}

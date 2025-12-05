@@ -39,13 +39,47 @@ Reasons for choosing QA Layer:
 Sentinel-2 L2A provides a built-in QA layer to identify clouds, shadows, water, and clear pixels, ensuring accurate NDVI calculations.
 This ensures that only clear pixels are used for vegetation analysis, improving reliability.
 
-## AOIs
+### Masking (Cloud, Shadow, Water) with SCL
 
-| **Name**                        | **Rationale**                                                                      | **Bounding Box (lat/lon)** | **Screenshot**                                       |
-| ------------------------------- | ---------------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------------- |
-| **Hyrcanian Forests**           | Dense forest in northern Iran, ideal for testing NDVI in healthy, thick vegetation | 36.54, 52.76, 36.67, 51.38 | ![Screenshot](./AOIs/Hyrcanian_forests.png)          |
-| **Tehran**                      | Capital city, mainly built-up area, low vegetation; test NDVI in urban environment | 35.61, 51.18, 35.82, 51.50 | ![Screenshot](./AOIs/Tehran.png)                     |
-| **Fars Province**               | Agricultural land in southern Iran, seasonal crops, moderate NDVI                  | 29.90, 52.5, 29.95, 52.85  | ![Screenshot](./AOIs/Fars_province.png)              |
+We use the Sentinel-2 L2A `SCL` (Scene Classification Layer) asset to filter out invalid pixels.  
+This raster contains one class code per pixel: clouds, shadows, snow, vegetation, water, etc.
+
+Masked classes:
+|  Value | Class Name               | Meaning                             |
+| -----: | ------------------------ | ----------------------------------- |
+|  **0** | NO_DATA                  | Invalid data / outside image        |
+|  **1** | SATURATED_OR_DEFECTIVE   | Sensor saturated or defective pixel |
+|  **2** | DARK_FEATURES            | Shadows or very dark surfaces       |
+|  **3** | CLOUD_SHADOWS            | Cloud shadows                       |
+|  **4** | VEGETATION               | Healthy vegetation                  |
+|  **5** | NOT_VEGETATED            | Soil / rocks / built-up             |
+|  **6** | WATER                    | Water bodies                        |
+|  **7** | UNCLASSIFIED             | No classification available         |
+|  **8** | CLOUD_MEDIUM_PROBABILITY | Possible clouds (medium confidence) |
+|  **9** | CLOUD_HIGH_PROBABILITY   | Highly probable clouds              |
+| **10** | THIN_CIRRUS              | High thin cirrus clouds             |
+| **11** | SNOW                     | Snow or ice                         |
+
+### SCL classes and handling
+- 0  NO_DATA                         → KEEP
+- 1  SATURATED_OR_DEFECTIVE          → KEEP
+- 2  DARK_FEATURES                   → KEEP
+- 3  CLOUD_SHADOWS                   → EXCLUDE
+- 4  VEGETATION                      → KEEP
+- 5  NOT_VEGETATED (soil/bare)       → KEEP
+- 6  WATER                           → EXCLUDE
+- 7  UNCLASSIFIED                    → KEEP
+- 8  CLOUD_MEDIUM_PROBABILITY        → EXCLUDE
+- 9  CLOUD_HIGH_PROBABILITY          → EXCLUDE
+- 10 THIN_CIRRUS                     → EXCLUDE
+- 11 SNOW_OR_ICE                     → KEEP
+
+Notes:
+- If SCL is missing for an item, we skip masking.
+
+### Implementation notes
+- SCL is normally 20 m resolution; we *upsample* SCL to 10 m (nearest-neighbor / 2×2 repeat) to align with B04/B08 before masking.
+
 
 ## STAC API
 API Name: Copernicus Data Space Ecosystem STAC API

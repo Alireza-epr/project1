@@ -1,9 +1,9 @@
-import { EPastTime } from "@/types/generalTypes";
+import { EPastTime } from "../types/generalTypes";
 import { getLocaleISOString } from "../utils/dateUtils";
 import { Marker, Subscription } from "maplibre-gl";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
-import { IStacSearchResponse, ITokenCollection, spatialItems, temporalItems, TSpatialComparison, TTemporalComparison } from "@/types/apiTypes";
+import { StacLink, IStacSearchResponse, ITokenCollection, spatialItems, temporalItems, TSpatialComparison, TTemporalComparison } from "../types/apiTypes";
 
 export enum EMarkerType {
   point = "point",
@@ -35,13 +35,17 @@ export interface IMapStoreStates {
   fetchFeatures: boolean;
   globalLoading: boolean;
   samples: INDVISample[];
+  notValidSamples: INDVISample[];
   responseFeatures: IStacSearchResponse | null;
   errorFeatures: Error | null;
+  errorNDVI: Error | null;
   tokenCollection: ITokenCollection | null;
   doneFeature: number;
   temporalOp: TTemporalComparison;
   spatialOp: TSpatialComparison;
-  showROI: boolean
+  showROI: boolean;
+  nextPage: StacLink | null
+  previousPage: StacLink | null
 }
 
 export interface IMapStoreActions {
@@ -60,12 +64,18 @@ export interface IMapStoreActions {
   setSamples: (
     a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
   ) => void;
+  setNotValidSamples: (
+    a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
+  ) => void;
   setResponseFeatures: (
     a_Value:
       | (IStacSearchResponse | null)
       | ((prev: IStacSearchResponse | null) => IStacSearchResponse | null),
   ) => void;
   setErrorFeatures: (
+    a_Value: (Error | null) | ((prev: Error | null) => Error | null),
+  ) => void;
+  setErrorNDVI: (
     a_Value: (Error | null) | ((prev: Error | null) => Error | null),
   ) => void;
   setTokenCollection: (
@@ -77,6 +87,14 @@ export interface IMapStoreActions {
   setLimit: (a_Value: string | ((prev: string) => string)) => void;
   setTemporalOp: (a_Start: TTemporalComparison | ((prev: TTemporalComparison) => TTemporalComparison)) => void;
   setSpatialOp: (a_Start: TSpatialComparison | ((prev: TSpatialComparison) => TSpatialComparison)) => void;
+  setPreviousPage: (
+    a_Link: 
+      | (StacLink | null)
+      | ((prev: StacLink | null) => StacLink | null)) => void
+  setNextPage: (
+    a_Link: 
+      | (StacLink | null)
+      | ((prev: StacLink | null) => StacLink | null)) => void
 }
 
 export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
@@ -104,13 +122,17 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       fetchFeatures: false,
       responseFeatures: null as IStacSearchResponse | null,
       errorFeatures: null as Error | null,
+      errorNDVI: null as Error | null,
       showChart: false,
       showError: false,
       globalLoading: false,
       doneFeature: 1,
       showROI: false,
+      nextPage: null as StacLink | null,
+      previousPage: null as StacLink | null,
       //NDVI
       samples: [] as INDVISample[],
+      notValidSamples: [] as INDVISample[]
     },
     (set) => ({
       // Actions
@@ -138,6 +160,22 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
             typeof a_Value === "function"
               ? a_Value(state.tokenCollection)
               : a_Value,
+        })),
+
+      setPreviousPage: (a_Link) =>
+        set((state) => ({
+          previousPage:
+            typeof a_Link === "function"
+              ? a_Link(state.previousPage)
+              : a_Link,
+        })),
+      
+      setNextPage: (a_Link) =>
+        set((state) => ({
+          nextPage:
+            typeof a_Link === "function"
+              ? a_Link(state.nextPage)
+              : a_Link,
         })),
 
       setStartDate: (a_Start: string | ((a_Prev: string) => string)) =>
@@ -218,6 +256,14 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
               ? a_Samples(state.samples)
               : a_Samples,
         })),
+      
+      setNotValidSamples: ( a_Samples ) =>
+        set((state) => ({
+          notValidSamples:
+            typeof a_Samples === "function"
+              ? a_Samples(state.notValidSamples)
+              : a_Samples,
+        })),
 
       setGlobalLoading: (a_Value: boolean | ((prev: boolean) => boolean)) =>
         set((state) => ({
@@ -240,6 +286,14 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
           errorFeatures:
             typeof a_Value === "function"
               ? a_Value(state.errorFeatures)
+              : a_Value,
+        })),
+
+      setErrorNDVI: (a_Value) =>
+        set((state) => ({
+          errorNDVI:
+            typeof a_Value === "function"
+              ? a_Value(state.errorNDVI)
               : a_Value,
         })),
 

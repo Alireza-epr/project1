@@ -43,6 +43,7 @@
     border-radius: 16px;
     border: 1px solid white;
     padding: 16px;
+    position: relative;
 }
 
 .footer {
@@ -67,9 +68,10 @@
     padding: 16px;
     border-radius: 16px;
     color: white;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     justify-content: center;
     align-items: center;
+    min-width: 0;
 }
 
 .footerItemTitle {
@@ -82,4 +84,48 @@
 
 .footerItemValue {
     flex: 1 1 0px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 50%;
+}
+
+.arrow {
+    position: absolute;
+    width: 7%;
+    height: 7%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid white;
+    border-radius: 16px;
+    background-color: darkcyan;
+    color: white;
+    flex: 1 1 0px;
+    &:hover {
+        background-color: lightseagreen;
+        cursor: pointer;
+    }
+}
+
+.next {
+    position: absolute;
+    right: -10%;
+    top: 50%;
+}
+
+.next img{
+    width: 200px;
+    max-height: 80%;
+}
+
+.previous {
+    position: absolute;
+    left: -10%;
+    top: 50%;
+}
+
+.previous img{
+    width: 200px;
+    max-height: 80%;
 }
