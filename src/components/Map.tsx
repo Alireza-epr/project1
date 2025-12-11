@@ -659,11 +659,15 @@ const Map = () => {
       if (responseFeatures) {
         //console.log(new Date(Date.now()).toISOString()+" STAC item numbers: " + responseFeatures.features.length)
         if (responseFeatures.features.length > 0) {
-          const NDVIItem : INDVIPanel = {
+          const NDVIItem: INDVIPanel = {
             filter: sampleFilter,
-            coverageThreshold: Number(coverageThreshold)
-          }
-          getNDVI(responseFeatures.features, getCoordinatesFromMarkers(), NDVIItem);
+            coverageThreshold: Number(coverageThreshold),
+          };
+          getNDVI(
+            responseFeatures.features,
+            getCoordinatesFromMarkers(),
+            NDVIItem,
+          );
         }
       }
     } else {
@@ -743,7 +747,7 @@ const Map = () => {
               {/* Y automatically scale to fit the data */}
               <YAxis stroke="white" />
               {/* popup tooltip by hovering */}
-              <Tooltip content={CustomTooltip}/>
+              <Tooltip content={CustomTooltip} />
               <Line type="linear" dataKey="meanNDVI" stroke="#2ecc71" />
             </LineChart>
           </ResponsiveContainer>

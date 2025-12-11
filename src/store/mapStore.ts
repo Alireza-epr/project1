@@ -22,18 +22,18 @@ export interface IMarker {
   marker: Marker;
 }
 
-export type TPercentage = `${number | string}%`
+export type TPercentage = `${number | string}%`;
 
 export interface INDVISample {
   id: number;
   datetime: string;
-  preview: string
-  ndviArray: Float32Array<ArrayBuffer> | null
+  preview: string;
+  ndviArray: Float32Array<ArrayBuffer> | null;
   meanNDVI: number | null;
-  medianNDVI: number | null
+  medianNDVI: number | null;
   n_valid: number;
   valid_fraction: TPercentage | "N/A";
-  filter: ESampleFilter
+  filter: ESampleFilter;
   filter_fraction: TPercentage | "N/A";
 }
 
@@ -45,7 +45,7 @@ export interface IMapStoreStates {
   startDate: string;
   endDate: string;
   cloudCover: string;
-  coverageThreshold : string;
+  coverageThreshold: string;
   snowCover: string;
   limit: string;
   showChart: boolean;
@@ -64,7 +64,7 @@ export interface IMapStoreStates {
   showROI: boolean;
   nextPage: StacLink | null;
   previousPage: StacLink | null;
-  sampleFilter: ESampleFilter
+  sampleFilter: ESampleFilter;
 }
 
 export interface IMapStoreActions {
@@ -75,7 +75,9 @@ export interface IMapStoreActions {
   setEndDate: (a_End: string | ((prev: string) => string)) => void;
   setCloudCover: (a_CloudCover: string | ((a_Prev: string) => string)) => void;
   setSnowCover: (a_SnowCover: string | ((a_Prev: string) => string)) => void;
-  setCoverageThreshold : (a_Value: string | ((a_Prev: string) => string)) => void;
+  setCoverageThreshold: (
+    a_Value: string | ((a_Prev: string) => string),
+  ) => void;
   setShowChart: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setShowROI: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setShowError: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
@@ -122,9 +124,7 @@ export interface IMapStoreActions {
     a_Link: (StacLink | null) | ((prev: StacLink | null) => StacLink | null),
   ) => void;
   setSampleFilter: (
-    a_Filter:
-      | ESampleFilter
-      | ((prev: ESampleFilter) => ESampleFilter),
+    a_Filter: ESampleFilter | ((prev: ESampleFilter) => ESampleFilter),
   ) => void;
 }
 
@@ -246,7 +246,7 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
               ? a_SnowCover(state.snowCover)
               : a_SnowCover,
         })),
-      
+
       setCoverageThreshold: (a_Value) =>
         set((state) => ({
           coverageThreshold:
@@ -344,7 +344,9 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       setSampleFilter: (a_Value) =>
         set((state) => ({
           sampleFilter:
-            typeof a_Value === "function" ? a_Value(state.sampleFilter) : a_Value,
+            typeof a_Value === "function"
+              ? a_Value(state.sampleFilter)
+              : a_Value,
         })),
     }),
   ),

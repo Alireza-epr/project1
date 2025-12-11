@@ -36,5 +36,5 @@ export const getLocaleISOString = (a_Date: Date, a_Past?: IPastTime) => {
 };
 
 export const getDatetime = (a_Datetime: string) => {
-    return a_Datetime.replace( "T" , " " ).substring( 0 , a_Datetime.indexOf(".") )
-}
+  return a_Datetime.replace("T", " ").substring(0, a_Datetime.indexOf("."));
+};

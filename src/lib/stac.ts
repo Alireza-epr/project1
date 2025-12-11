@@ -88,9 +88,13 @@ export const useNDVI = () => {
   const getNDVI = async (
     a_Features: IStacItem[],
     a_Coordinates: [number, number][],
-    a_NDVIPanel: INDVIPanel
+    a_NDVIPanel: INDVIPanel,
   ) => {
-    const bandKeys = [EStacAssetsKey.nir, EStacAssetsKey.red, EStacAssetsKey.scl];
+    const bandKeys = [
+      EStacAssetsKey.nir,
+      EStacAssetsKey.red,
+      EStacAssetsKey.scl,
+    ];
     const rasters: { band: EStacAssetsKey; raster: ReadRasterResult | null }[] =
       bandKeys.map((b) => {
         return {
@@ -146,19 +150,24 @@ export const useNDVI = () => {
         ...
 
         */
-        const nirRaster = rasters.find((r) => r.band == EStacAssetsKey.nir)?.raster;
-        const redRaster = rasters.find((r) => r.band == EStacAssetsKey.red)?.raster;
-        const SCLRaster = rasters.find((r) => r.band == EStacAssetsKey.scl)?.raster;
+        const nirRaster = rasters.find(
+          (r) => r.band == EStacAssetsKey.nir,
+        )?.raster;
+        const redRaster = rasters.find(
+          (r) => r.band == EStacAssetsKey.red,
+        )?.raster;
+        const SCLRaster = rasters.find(
+          (r) => r.band == EStacAssetsKey.scl,
+        )?.raster;
         if (nirRaster && redRaster && SCLRaster) {
-          
           const ndviSample = getNDVISample(
             countId,
-            redRaster, 
-            nirRaster, 
-            SCLRaster, 
-            a_NDVIPanel, 
-            feature
-          )  
+            redRaster,
+            nirRaster,
+            SCLRaster,
+            a_NDVIPanel,
+            feature,
+          );
           //console.log(new Date(Date.now()).toISOString()+ " " +featureNDVI.length + " pixels from the Sentinel-2 image for the given ROI")
           //console.log(new Date(Date.now()).toISOString()+" NDVI for "+ feature.id)
 
@@ -181,8 +190,8 @@ export const useNDVI = () => {
           filter: a_NDVIPanel.filter,
           filter_fraction: "N/A",
           n_valid: 0,
-          valid_fraction: error.cause.valid_fraction ?? "N/A"
-        }
+          valid_fraction: error.cause.valid_fraction ?? "N/A",
+        };
         ndviSamples.push(ndviSampleNotValid);
         //console.error(error);
         ++countId;

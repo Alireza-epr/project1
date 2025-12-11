@@ -1,8 +1,8 @@
-import customTooltipItemStyle from "./CustomTooltipItem.module.scss"
+import customTooltipItemStyle from "./CustomTooltipItem.module.scss";
 
 export interface ICustomTooltipItemProps {
-    label: string,
-    value: string | number
+  label: string;
+  value: string | number;
 }
 const CustumTooltipItem = (props: ICustomTooltipItemProps) => {
   return (
@@ -10,7 +10,7 @@ const CustumTooltipItem = (props: ICustomTooltipItemProps) => {
       <div className={` ${customTooltipItemStyle.label}`}>{props.label}</div>
       <div className={` ${customTooltipItemStyle.value}`}>{props.value}</div>
     </div>
-  )
-}
+  );
+};
 
-export default CustumTooltipItem
+export default CustumTooltipItem;

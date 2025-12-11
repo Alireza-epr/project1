@@ -15,12 +15,12 @@ export enum ELoadingSize {
 }
 
 export enum ESampleFilter {
-  none= "none",
-  zScore= "z-score",
-  IQR= "IQR"
+  none = "none",
+  zScore = "z-score",
+  IQR = "IQR",
 }
 
 export interface INDVIPanel {
-  filter: ESampleFilter,
-  coverageThreshold: number
+  filter: ESampleFilter;
+  coverageThreshold: number;
 }

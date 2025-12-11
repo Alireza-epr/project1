@@ -1,10 +1,9 @@
-import chartListItemStyles from "./ChartListRow.module.scss"
-import ChartListRowItem from "./ChartListRowItem"
+import chartListItemStyles from "./ChartListRow.module.scss";
+import ChartListRowItem from "./ChartListRowItem";
 
 const ChartListRowHeader = () => {
   return (
     <div className={` ${chartListItemStyles.wrapper}`}>
-
       <ChartListRowItem title="Preview" isHeaderItem={true}>
         Preview
       </ChartListRowItem>
@@ -41,7 +40,7 @@ const ChartListRowHeader = () => {
         Download
       </ChartListRowItem>
     </div>
-  )
-}
+  );
+};
 
-export default ChartListRowHeader
+export default ChartListRowHeader;

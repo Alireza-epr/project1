@@ -22,7 +22,9 @@ const Sidebar = () => {
   const setMarkers = useMapStore((state) => state.setMarkers);
 
   const coverageThreshold = useMapStore((state) => state.coverageThreshold);
-  const setCoverageThreshold = useMapStore((state) => state.setCoverageThreshold);
+  const setCoverageThreshold = useMapStore(
+    (state) => state.setCoverageThreshold,
+  );
 
   const fetchFeatures = useMapStore((state) => state.fetchFeatures);
   const setFetchFeatures = useMapStore((state) => state.setFetchFeatures);
@@ -139,8 +141,8 @@ const Sidebar = () => {
   };
 
   const handleSampleFilter = (a_Type: ESampleFilter) => {
-    setSampleFilter(a_Type)
-  }
+    setSampleFilter(a_Type);
+  };
 
   return (
     <div className={` ${sidebarStyles.wrapper}`}>
@@ -162,9 +164,8 @@ const Sidebar = () => {
             />
           </div>
         </Section>
-        
-        <Section title="STAC" disabled={fetchFeatures}>
 
+        <Section title="STAC" disabled={fetchFeatures}>
           <Section title="Start Date" disabled={fetchFeatures}>
             <DateInput value={startDate} onDateChange={handleStartDateChange} />
           </Section>
@@ -187,7 +188,10 @@ const Sidebar = () => {
             title={`Max Snow Cover - ${snowCover}%`}
             disabled={fetchFeatures}
           >
-            <RangeInput value={snowCover} onRangeChange={handleSnowCoverChange} />
+            <RangeInput
+              value={snowCover}
+              onRangeChange={handleSnowCoverChange}
+            />
           </Section>
 
           <Section title={`Page Limit - ${limit}`} disabled={fetchFeatures}>
@@ -197,12 +201,17 @@ const Sidebar = () => {
               max={50}
             />
           </Section>
-
         </Section>
 
         <Section title="NDVI" disabled={fetchFeatures}>
-          <Section title={`Min Coverage Threshold  - ${coverageThreshold}%`} disabled={fetchFeatures} >
-            <RangeInput value={coverageThreshold} onRangeChange={handleCoverageThresholdChange} />
+          <Section
+            title={`Min Coverage Threshold  - ${coverageThreshold}%`}
+            disabled={fetchFeatures}
+          >
+            <RangeInput
+              value={coverageThreshold}
+              onRangeChange={handleCoverageThresholdChange}
+            />
           </Section>
           <Section title="Filter" disabled={fetchFeatures}>
             <div className={` ${sidebarStyles.buttonRowWrapper}`}>
@@ -225,11 +234,8 @@ const Sidebar = () => {
                 disable={fetchFeatures}
               />
             </div>
-            
-            
           </Section>
         </Section>
-        
 
         <Section title="Chart">
           <CSelect

@@ -2,7 +2,7 @@ import { useMapStore } from "../store/mapStore";
 import chartStyles from "./Chart.module.scss";
 import { useEffect, useState } from "react";
 import ChartFooterItem from "./ChartFooterItem";
-import ChartListRows from "./ChartListRows"; 
+import ChartListRows from "./ChartListRows";
 
 export interface IChartProps {
   children: React.ReactNode;
@@ -22,7 +22,7 @@ const Chart = (props: IChartProps) => {
   const [meanNDVI, setMeanNDVI] = useState<number>(0);
   const [minNDVI, setMinNDVI] = useState<number>(0);
 
-  const [showList, setShowList] = useState(false)
+  const [showList, setShowList] = useState(false);
 
   useEffect(() => {
     if (samples.length !== 0) {
@@ -53,37 +53,34 @@ const Chart = (props: IChartProps) => {
   }, [samples]);
 
   const getValidity = () => {
-    return props.items ? `${samples.length}/${( props.items )}` : '-'
-  }
+    return props.items ? `${samples.length}/${props.items}` : "-";
+  };
 
   const handleListItems = () => {
-    setShowList(!showList)
-  }
+    setShowList(!showList);
+  };
 
   return (
     <div className={` ${chartStyles.wrapper}`}>
       <div className={` ${chartStyles.buttonsWrapper}`}>
-        { props.items
-          ? 
-            <div className={` ${chartStyles.button}`} >
-              <img src="/images/list.svg" alt="List" onClick={handleListItems} />
-            </div> 
-          :
-            <></>
-        }
+        {props.items ? (
+          <div className={` ${chartStyles.button}`}>
+            <img src="/images/list.svg" alt="List" onClick={handleListItems} />
+          </div>
+        ) : (
+          <></>
+        )}
         <div className={` ${chartStyles.button}`} onClick={props.onClose}>
           X
         </div>
       </div>
-      {
-        showList 
-        ?
-          <div className={` ${chartStyles.listWrapper}`}>
-            <ChartListRows items={[...samples, ...notValidSamples]}/>
-          </div>
-        :
-          <></>
-      }
+      {showList ? (
+        <div className={` ${chartStyles.listWrapper}`}>
+          <ChartListRows items={[...samples, ...notValidSamples]} />
+        </div>
+      ) : (
+        <></>
+      )}
       <div className={` ${chartStyles.children}`}>
         {previousPage && props.onPrevious && (
           <div
@@ -115,7 +112,10 @@ const Chart = (props: IChartProps) => {
         <ChartFooterItem title="Max NDVI" value={maxNDVI} />
         <ChartFooterItem title="Mean NDVI" value={meanNDVI} />
         <ChartFooterItem title="Min NDVI" value={minNDVI} />
-        <ChartFooterItem title="Latency" value={props.latency ? `${props.latency.toFixed(1)} ms` : "-"} />
+        <ChartFooterItem
+          title="Latency"
+          value={props.latency ? `${props.latency.toFixed(1)} ms` : "-"}
+        />
         <ChartFooterItem title="Validity" value={getValidity()} />
       </div>
     </div>

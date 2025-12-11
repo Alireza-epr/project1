@@ -15,7 +15,7 @@ export enum EStacAssetsKey {
   nir = "B08",
   red = "B04",
   scl = "SCL",
-  rendered_preview = "rendered_preview"
+  rendered_preview = "rendered_preview",
 }
 
 export enum ESTACCollections {

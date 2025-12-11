@@ -20,7 +20,7 @@ export interface IImportedROI {
 }
 
 export interface ICoordinatesProps {
-  disable: boolean
+  disable: boolean;
 }
 
 const Coordinates = (props: ICoordinatesProps) => {

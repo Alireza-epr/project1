@@ -1,7 +1,12 @@
 import { INDVISample, TPercentage } from "../store/mapStore";
 import { ESTACURLS, IStacItem, ITokenCollection } from "../types/apiTypes";
 import { ESampleFilter, INDVIPanel } from "../types/generalTypes";
-import GeoTIFF, { fromUrl, GeoTIFFImage, ReadRasterResult, TypedArray } from "geotiff";
+import GeoTIFF, {
+  fromUrl,
+  GeoTIFFImage,
+  ReadRasterResult,
+  TypedArray,
+} from "geotiff";
 import proj4 from "proj4";
 
 export const getFeatureToken = async (
@@ -150,13 +155,12 @@ export const toFloat32Array = (a_Arr: TypedArray): Float32Array => {
 
 export const getNDVISample = (
   a_Id: number,
-  a_Red: ReadRasterResult ,
-  a_Nir: ReadRasterResult ,
-  a_SCL: ReadRasterResult ,
+  a_Red: ReadRasterResult,
+  a_Nir: ReadRasterResult,
+  a_SCL: ReadRasterResult,
   a_NDVIPanel: INDVIPanel,
   a_Feature: IStacItem,
 ): INDVISample => {
-  
   // Upscaling SCL
   const upscaledSCL: Uint8Array<ArrayBuffer> = getUpscaledSCL(
     a_SCL[0],
@@ -188,33 +192,35 @@ export const getNDVISample = (
   const validPixelsPercentage = (validPixels / len) * 100;
   const coverageThreshold = a_NDVIPanel.coverageThreshold;
   if (validPixelsPercentage < coverageThreshold) {
-    const err = new Error(`Scene rejected: ${validPixelsPercentage.toFixed(2)}% valid pixels (required ≥ ${coverageThreshold}%).`)
-    err.cause = {ndviArray,valid_fraction: `${validPixelsPercentage.toFixed(2)}%`}
-    throw err
+    const err = new Error(
+      `Scene rejected: ${validPixelsPercentage.toFixed(2)}% valid pixels (required ≥ ${coverageThreshold}%).`,
+    );
+    err.cause = {
+      ndviArray,
+      valid_fraction: `${validPixelsPercentage.toFixed(2)}%`,
+    };
+    throw err;
   }
 
   // Reject Outliers
-  let filteredNDVIArray : {
+  let filteredNDVIArray: {
     ndviArray: Float32Array<ArrayBuffer>;
     fraction: TPercentage;
-  }
-  switch(a_NDVIPanel.filter){
+  };
+  switch (a_NDVIPanel.filter) {
     case ESampleFilter.IQR:
-      filteredNDVIArray = rejectOutliersIQR(ndviArray)
+      filteredNDVIArray = rejectOutliersIQR(ndviArray);
       break;
     case ESampleFilter.zScore:
-      filteredNDVIArray = rejectOutliersZScore(ndviArray)
+      filteredNDVIArray = rejectOutliersZScore(ndviArray);
       break;
-    default: filteredNDVIArray = {ndviArray, fraction: "100%"}
+    default:
+      filteredNDVIArray = { ndviArray, fraction: "100%" };
   }
 
   // Calculating mean and median
-  const meanNDVI = getMeanNDVI(
-    ndviArray
-  );
-  const medianNDVI = getMedianNDVI(
-    ndviArray
-  );
+  const meanNDVI = getMeanNDVI(ndviArray);
+  const medianNDVI = getMedianNDVI(ndviArray);
 
   return {
     id: a_Id,
@@ -230,12 +236,10 @@ export const getNDVISample = (
 
     filter: a_NDVIPanel.filter,
     filter_fraction: filteredNDVIArray.fraction,
-  }
-}
+  };
+};
 
-export const getMeanNDVI = (
-  a_NDVI: Float32Array<ArrayBufferLike>,
-) => {
+export const getMeanNDVI = (a_NDVI: Float32Array<ArrayBufferLike>) => {
   let sum = 0;
   let count = 0;
 
@@ -246,33 +250,29 @@ export const getMeanNDVI = (
     }
   }
 
-
-  return count > 0
-    ? sum / count
-    : null;
+  return count > 0 ? sum / count : null;
 };
 
-export const getMedianNDVI = (
-  a_NDVI: Float32Array<ArrayBufferLike>,
-) => {
-  const sorted = Float32Array.from(a_NDVI).filter( n => !isNaN(n) && isFinite(n)).sort((a, b) => a - b);
-  if(sorted.length == 0){
-    return null
+export const getMedianNDVI = (a_NDVI: Float32Array<ArrayBufferLike>) => {
+  const sorted = Float32Array.from(a_NDVI)
+    .filter((n) => !isNaN(n) && isFinite(n))
+    .sort((a, b) => a - b);
+  if (sorted.length == 0) {
+    return null;
   }
-  const len = sorted.length
-  if(len == 1){
-    return sorted[0] as number
+  const len = sorted.length;
+  if (len == 1) {
+    return sorted[0] as number;
   }
   const mid = Math.floor(len / 2);
-  if(len % 2){
+  if (len % 2) {
     // Even
-    return ( (sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
+    return ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
   } else {
     //Odd
     return sorted[mid] as number;
   }
-
-}
+};
 
 export const validateImportedROI = (a_JSON: any) => {
   // 1. Must contain "coordinates"
@@ -397,28 +397,32 @@ export const getLngLatsFromMarker = (
   return lngLats;
 };
 
-export const rejectOutliersIQR = (a_NDVI: Float32Array ) => {
-  const validSortedNDVI = Array.from(a_NDVI).filter(v => !isNaN(v)).sort((a, b) => a - b);
+export const rejectOutliersIQR = (a_NDVI: Float32Array) => {
+  const validSortedNDVI = Array.from(a_NDVI)
+    .filter((v) => !isNaN(v))
+    .sort((a, b) => a - b);
 
-  const q1Index = Math.floor(0.25 * validSortedNDVI.length)
-  const q3Index = Math.floor(0.75 * validSortedNDVI.length)
-  const q1 = validSortedNDVI[q1Index]
-  const q3 = validSortedNDVI[q3Index]
-  const IQR = q3 - q1
-  const lowIQR = q1 - (1.5*IQR)
-  const highIQR = q3 + (1.5*IQR)
-  const filteredNDVI  = a_NDVI.filter( ndvi => ndvi >= lowIQR && ndvi <= highIQR )
-  
-  const fractionValid: TPercentage = `${((filteredNDVI.length / a_NDVI.length)*100).toFixed(2)}%`;
+  const q1Index = Math.floor(0.25 * validSortedNDVI.length);
+  const q3Index = Math.floor(0.75 * validSortedNDVI.length);
+  const q1 = validSortedNDVI[q1Index];
+  const q3 = validSortedNDVI[q3Index];
+  const IQR = q3 - q1;
+  const lowIQR = q1 - 1.5 * IQR;
+  const highIQR = q3 + 1.5 * IQR;
+  const filteredNDVI = a_NDVI.filter(
+    (ndvi) => ndvi >= lowIQR && ndvi <= highIQR,
+  );
+
+  const fractionValid: TPercentage = `${((filteredNDVI.length / a_NDVI.length) * 100).toFixed(2)}%`;
 
   return {
     ndviArray: new Float32Array(filteredNDVI),
-    fraction: fractionValid
-  } 
-}
+    fraction: fractionValid,
+  };
+};
 
 export const rejectOutliersZScore = (a_NDVI: Float32Array, a_Threshold = 2) => {
-  const validNDVI = Array.from(a_NDVI).filter(v => !isNaN(v));
+  const validNDVI = Array.from(a_NDVI).filter((v) => !isNaN(v));
 
   if (validNDVI.length === 0) {
     return { ndviArray: new Float32Array(), fraction: `${0}%` as TPercentage };
@@ -426,16 +430,19 @@ export const rejectOutliersZScore = (a_NDVI: Float32Array, a_Threshold = 2) => {
 
   const mean = validNDVI.reduce((sum, val) => sum + val, 0) / validNDVI.length;
 
-  const variance = validNDVI.reduce((sum, val) => sum + (val - mean) ** 2, 0) / validNDVI.length;
+  const variance =
+    validNDVI.reduce((sum, val) => sum + (val - mean) ** 2, 0) /
+    validNDVI.length;
   const stdDev = Math.sqrt(variance);
 
-  const filteredNDVI = validNDVI.filter(ndvi => Math.abs(ndvi - mean) <= a_Threshold * stdDev);
+  const filteredNDVI = validNDVI.filter(
+    (ndvi) => Math.abs(ndvi - mean) <= a_Threshold * stdDev,
+  );
 
-  const fractionValid: TPercentage = `${((filteredNDVI.length / a_NDVI.length)*100).toFixed(2)}%`;
+  const fractionValid: TPercentage = `${((filteredNDVI.length / a_NDVI.length) * 100).toFixed(2)}%`;
 
-  return { 
-    ndviArray: new Float32Array(filteredNDVI), 
-    fraction: fractionValid 
+  return {
+    ndviArray: new Float32Array(filteredNDVI),
+    fraction: fractionValid,
   };
 };
-
