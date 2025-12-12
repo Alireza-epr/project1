@@ -17,7 +17,7 @@ const ChartListRowItem = (props: IChartListRowItemProps) => {
           ? "#e29c45"
           : props.isHeaderItem
             ? "#476d6c"
-            : "",
+            : "#3aac1aff",
       }}
     >
       <div className={` ${chartListRowItem.item}`}>{props.children}</div>

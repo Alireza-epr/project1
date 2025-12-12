@@ -83,7 +83,7 @@ export const useNDVI = () => {
   const setNotValidSamples = useMapStore((state) => state.setNotValidSamples);
   const doneFeature = useMapStore((state) => state.doneFeature);
   const setDoneFeature = useMapStore((state) => state.setDoneFeature);
-  const setErrorNDVI = useMapStore((state) => state.setErrorNDVI);
+  const setGlobalLoading = useMapStore((state) => state.setGlobalLoading);
 
   const getNDVI = async (
     a_Features: IStacItem[],
@@ -102,19 +102,24 @@ export const useNDVI = () => {
           raster: null,
         };
       });
-    let ndviSamples: INDVISample[] = [];
     let countId = 1;
 
     setDoneFeature(1);
+    setSamples([])
+    setNotValidSamples([])
     for (const feature of a_Features) {
       try {
         //console.log(new Date(Date.now()).toISOString()+" Start Calculating NDVI for STAC Item id "+ feature.id)
         const cacheKey = `${JSON.stringify(a_Coordinates)}_${feature.id}_${JSON.stringify(a_NDVIPanel)}`;
         if (cache.getCache(cacheKey)) {
           console.log("Cached NDVI");
-          const cachedFeature = cache.getCache(cacheKey);
-          console.log(cachedFeature);
-          ndviSamples.push(cachedFeature);
+          const cachedNDVI = cache.getCache(cacheKey) as INDVISample;
+          console.log(cachedNDVI);
+          if(cachedNDVI.meanNDVI){
+            setSamples(prev => [...prev, cachedNDVI])
+          } else {
+            setNotValidSamples(prev => [...prev, cachedNDVI])
+          }
           ++countId;
           setDoneFeature((prev) => ++prev);
           continue;
@@ -172,7 +177,7 @@ export const useNDVI = () => {
           //console.log(new Date(Date.now()).toISOString()+" NDVI for "+ feature.id)
 
           cache.setCache(cacheKey, ndviSample);
-          ndviSamples.push(ndviSample);
+          setSamples(prev=> [...prev, ndviSample])
         } else {
           throw new Error("Scene rejected: rasters are undefined");
         }
@@ -192,21 +197,13 @@ export const useNDVI = () => {
           n_valid: 0,
           valid_fraction: error.cause.valid_fraction ?? "N/A",
         };
-        ndviSamples.push(ndviSampleNotValid);
-        //console.error(error);
+        setNotValidSamples(prev=> [...prev, ndviSampleNotValid])
         ++countId;
         setDoneFeature((prev) => ++prev);
         continue;
       }
     }
-    const validSamples = ndviSamples.filter((m) => m.meanNDVI);
-    const notValidSamples = ndviSamples.filter((m) => !m.meanNDVI);
-    setNotValidSamples(notValidSamples);
-    if (validSamples.length > 0) {
-      setSamples(validSamples);
-    } else {
-      setErrorNDVI(new Error("No valid scene"));
-    }
+    setGlobalLoading(false)
   };
 
   return {

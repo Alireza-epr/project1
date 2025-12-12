@@ -73,6 +73,7 @@ const Map = () => {
   const setShowError = useMapStore((state) => state.setShowError);
   const setFetchFeatures = useMapStore((state) => state.setFetchFeatures);
   const setSamples = useMapStore((state) => state.setSamples);
+  const setNotValidSamples = useMapStore((state) => state.setNotValidSamples);
   const setGlobalLoading = useMapStore((state) => state.setGlobalLoading);
   const setResponseFeatures = useMapStore((state) => state.setResponseFeatures);
   const setErrorFeatures = useMapStore((state) => state.setErrorFeatures);
@@ -421,6 +422,7 @@ const Map = () => {
     start = Date.now();
     setLatency(0)
     setSamples([]);
+    setNotValidSamples([])
     setResponseFeatures(null);
     setErrorFeatures(null);
   };
@@ -778,7 +780,9 @@ const Map = () => {
 
   // 4. Show Chart
   useEffect(() => {
-    if (samples.length !== 0) {
+    if(globalLoading) {
+      showLoadingModal()
+    } else {
       if (samples.every((s) => !s.meanNDVI)) {
         showErrorModal();
       } else {
@@ -786,12 +790,8 @@ const Map = () => {
         end = Date.now();
         setLatency(end - start);
       }
-    } else {
-      if (!globalLoading) {
-        showMap();
-      }
     }
-  }, [samples]);
+  }, [globalLoading]);
 
   return (
     <div className={` ${mapStyle.wrapper}`}>
