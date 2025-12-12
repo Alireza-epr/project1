@@ -48,9 +48,10 @@ export interface IMapStoreStates {
   coverageThreshold: string;
   snowCover: string;
   limit: string;
+  radius: string;
   showChart: boolean;
   showError: boolean;
-  fetchFeatures: boolean;
+  fetchFeatures: EMarkerType | null;
   globalLoading: boolean;
   samples: INDVISample[];
   notValidSamples: INDVISample[];
@@ -81,7 +82,11 @@ export interface IMapStoreActions {
   setShowChart: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setShowROI: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setShowError: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
-  setFetchFeatures: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
+  setFetchFeatures: (
+    a_Value:
+      | (EMarkerType | null)
+      | ((prev: EMarkerType | null) => EMarkerType | null),
+  ) => void;
   setGlobalLoading: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setSamples: (
     a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
@@ -107,6 +112,7 @@ export interface IMapStoreActions {
   ) => void;
   setDoneFeature: (a_Value: number | ((prev: number) => number)) => void;
   setLimit: (a_Value: string | ((prev: string) => string)) => void;
+  setRadius: (a_Value: string | ((prev: string) => string)) => void;
   setTemporalOp: (
     a_Start:
       | TTemporalComparison
@@ -147,11 +153,12 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       snowCover: "50",
       coverageThreshold: "70",
       limit: "20",
+      radius: "10",
       spatialOp: spatialItems[0].value,
       temporalOp: temporalItems[0].value,
       //features
       tokenCollection: null as ITokenCollection | null,
-      fetchFeatures: false,
+      fetchFeatures: null as EMarkerType | null,
       responseFeatures: null as IStacSearchResponse | null,
       errorFeatures: null as Error | null,
       errorNDVI: null as Error | null,
@@ -226,6 +233,11 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
           limit: typeof a_Value === "function" ? a_Value(state.limit) : a_Value,
         })),
 
+      setRadius: (a_Value) =>
+        set((state) => ({
+          radius: typeof a_Value === "function" ? a_Value(state.radius) : a_Value,
+        })),
+
       setEndDate: (a_End: string | ((a_Prev: string) => string)) =>
         set((state) => ({
           endDate: typeof a_End === "function" ? a_End(state.endDate) : a_End,
@@ -273,7 +285,7 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
             typeof a_Value === "function" ? a_Value(state.showError) : a_Value,
         })),
 
-      setFetchFeatures: (a_Value: boolean | ((prev: boolean) => boolean)) =>
+      setFetchFeatures: (a_Value) =>
         set((state) => ({
           fetchFeatures:
             typeof a_Value === "function"

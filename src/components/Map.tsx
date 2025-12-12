@@ -4,7 +4,7 @@ import maplibregl from "maplibre-gl";
 import { Map as MapLibre } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { EMarkerType, IMarker, useMapStore } from "../store/mapStore";
-import type { Feature, FeatureCollection, Polygon } from "geojson";
+import type { Feature, Polygon } from "geojson";
 import { useFilterSTAC, useNDVI, useTokenCollection } from "../lib/stac";
 import {
   LineChart,
@@ -24,11 +24,11 @@ import {
   TSpatialFilter,
 } from "../types/apiTypes";
 import Loading from "./Loading";
-import { ELoadingSize, INDVIPanel } from "../types/generalTypes";
+import { ELoadingSize, ILayerMetadata, INDVIPanel, Units } from "../types/generalTypes";
 import Chart from "./Chart";
 import { debounce, throttle } from "../utils/apiUtils";
-import { getLngLatsFromMarker } from "../utils/calculationUtils";
 import CustomTooltip from "./CustomTooltip";
+import circle from "@turf/circle"
 
 let start: number, end: number;
 
@@ -57,6 +57,7 @@ const Map = () => {
   const temporalOp = useMapStore((state) => state.temporalOp);
   const spatialOp = useMapStore((state) => state.spatialOp);
   const limit = useMapStore((state) => state.limit);
+  const radius = useMapStore((state) => state.radius);
   const nextPage = useMapStore((state) => state.nextPage);
   const previousPage = useMapStore((state) => state.previousPage);
   const sampleFilter = useMapStore((state) => state.sampleFilter);
@@ -107,29 +108,23 @@ const Map = () => {
     1000,
   );
 
-  const handlePointMarker = (a_Event: maplibregl.MapMouseEvent) => {
-    if (mapObject.current) {
-      addMarker(
-        [a_Event.lngLat.lng, a_Event.lngLat.lat],
-        mapObject.current,
-        EMarkerType.point,
-        { draggable: true },
-      );
-    }
-  };
-
   const markersRef = useRef(markers);
+  const radiusRef = useRef(radius);
+  const fetchFeaturesRef = useRef(fetchFeatures);
+  
+  const addPointMarker = (a_Event: maplibregl.MapMouseEvent) => {
+    if(a_Event.originalEvent.button == 0 && mapObject.current) {
+      removeMarker(EMarkerType.point)
 
-  const handlePolygonMarker = (a_Event: maplibregl.MapMouseEvent) => {
-    if (a_Event.originalEvent.button === 2) {
-      removePolygon();
+      const center: [number, number] = [a_Event.lngLat.lng, a_Event.lngLat.lat]
+      addMarker(center, mapObject.current, EMarkerType.point, {color: "green"});
 
-      const lngLats = getLngLatsFromMarker(a_Event.lngLat);
-      lngLats.forEach((lngLat) => {
-        if (!mapObject.current) return;
-        addMarker(lngLat, mapObject.current, EMarkerType.polygon);
-      });
-    } else if (a_Event.originalEvent.button == 0 && mapObject.current) {
+      drawCircle(center)
+    }
+  }
+
+  const addPolygonMarker = (a_Event: maplibregl.MapMouseEvent) => {
+    if (a_Event.originalEvent.button == 0 && mapObject.current) {
       addMarker(
         [a_Event.lngLat.lng, a_Event.lngLat.lat],
         mapObject.current,
@@ -156,12 +151,31 @@ const Map = () => {
     setMarkers((prevMarkers) => [...prevMarkers, newMarker]);
   };
 
+  const removeMarker = (a_MarkerType: EMarkerType) => {
+    setMarkers((prev) => {
+      const toRemove = prev.filter((m) => m.type === a_MarkerType);
+      toRemove.forEach((m) => m.marker.remove());
+
+      return prev.filter((m) => m.type !== a_MarkerType);
+    });
+  }
+
   const removePolygonLayer = () => {
     if (mapObject.current) {
       const polygonLayer = mapObject.current.getLayer("polygon");
       if (polygonLayer) {
         mapObject.current.removeLayer("polygon");
         mapObject.current.removeSource("polygon");
+      }
+    }
+  };
+
+  const removeCircleLayer = () => {
+    if (mapObject.current) {
+      const circleLayer = mapObject.current.getLayer("circle");
+      if (circleLayer) {
+        mapObject.current.removeLayer("circle");
+        mapObject.current.removeSource("circle");
       }
     }
   };
@@ -215,8 +229,50 @@ const Map = () => {
         "fill-color": "#088",
         "fill-opacity": 0.5,
       },
+      metadata: {
+        feature: geojson
+      }
     });
   };
+
+  const drawCircle = (a_Center: [number, number]) => {
+
+    const radius = Number(radiusRef.current) 
+    const options = {units: "meters" as Units};
+    const circleFeature = circle( a_Center, radius, options )
+    
+    removeCircleLayer();
+
+    if (!mapObject.current!.getStyle()) {
+      return;
+    }
+
+    mapObject.current!.addSource("circle", {
+      type: "geojson",
+      data: circleFeature,
+    });
+
+    mapObject.current!.addLayer({
+      id: "circle",
+      type: "fill",
+      source: "circle",
+      paint: {
+        "fill-color": "rgba(4, 185, 64, 1)",
+        "fill-opacity": 0.5,
+      },
+      metadata: {
+        feature: circleFeature,
+        center: a_Center
+      }
+    });
+  };
+
+  const redrawCircle = () => {
+    const point = markers.find( m => m.type === EMarkerType.point )
+    if(!point) return 
+    const center: [number, number] = [point.marker.getLngLat().lng, point.marker.getLngLat().lat]
+    drawCircle(center)
+  }
 
   const addMarkersToMap = () => {
     setMarkers((prev) => {
@@ -242,21 +298,104 @@ const Map = () => {
   };
 
   const getCoordinatesFromMarkers = (): [number, number][] => {
-    let coordinates: [number, number][] = markers.map((m) => {
-      const lng = m.marker.getLngLat().lng;
-      const lat = m.marker.getLngLat().lat;
-      return [lng, lat];
-    });
-    // Close the polygon
-    coordinates.push(coordinates[0]);
-
-    return coordinates;
+    
+    if(fetchFeaturesRef.current === EMarkerType.polygon){
+      let coordinates: [number, number][] = markersRef.current.filter( m => m.type === EMarkerType.polygon ).map((m) => {
+        const lng = m.marker.getLngLat().lng;
+        const lat = m.marker.getLngLat().lat;
+        return [lng, lat];
+      });
+      // Close the polygon
+      coordinates.push(coordinates[0]);
+      return coordinates;
+    } else {
+      const circleLayer = mapObject.current!.getLayer("circle");
+      const metadata = circleLayer!.metadata as ILayerMetadata
+      const feature = metadata!.feature
+      return feature.geometry.coordinates[0]
+    }
   };
+
+  const getPostBody = () => {
+    const cloudCoverFilter: TCloudCoverFilter = {
+      op: "<=",
+      args: [
+        {
+          property: "eo:cloud_cover",
+        },
+        Number(cloudCover),
+      ],
+    };
+    const snowCoverFilter: TSnowCoverFilter = {
+      op: "<=",
+      args: [
+        {
+          property: "s2:snow_ice_percentage",
+        },
+        Number(snowCover),
+      ],
+    };
+    const datetimeFilter: TDateTimeFilter = {
+      op: "t_during",
+      args: [
+        {
+          property: "datetime",
+        },
+        {
+          interval: [startDate, endDate],
+        },
+      ],
+    };
+    const geometryFilter: TSpatialFilter = {
+      op: spatialOp,
+      args: [
+        {
+          property: "geometry",
+        },
+        {
+          type: "Polygon",
+          coordinates: [getCoordinatesFromMarkers()],
+        },
+      ],
+    };
+
+    let temporalFilter = "";
+
+    switch (temporalOp) {
+      case "t_during":
+        temporalFilter = `${startDate.substring(0, startDate.indexOf("T"))}/${endDate.substring(0, endDate.indexOf("T"))}`;
+        break;
+      case "t_after":
+        temporalFilter = `${startDate.substring(0, startDate.indexOf("T"))}/`;
+        break;
+      case "t_before":
+        temporalFilter = `/${endDate.substring(0, endDate.indexOf("T"))}`;
+        break;
+    }
+
+    const postBody: ISTACFilterRequest = {
+      sortby: [
+        {
+          field: "properties.datetime",
+          direction: "asc",
+        },
+      ],
+      collections: [ESTACCollections.Sentinel2l2a],
+      filter: {
+        op: "and",
+        args: [cloudCoverFilter, snowCoverFilter, geometryFilter],
+      },
+      datetime: temporalFilter,
+      limit: Number(limit),
+    };
+
+    return postBody
+  }
 
   const showMap = () => {
     setShowError(false);
     setShowChart(false);
-    setFetchFeatures(false);
+    setFetchFeatures(null);
     setGlobalLoading(false);
   };
 
@@ -279,13 +418,15 @@ const Map = () => {
   };
 
   const resetStates = () => {
+    start = Date.now();
+    setLatency(0)
     setSamples([]);
     setResponseFeatures(null);
     setErrorFeatures(null);
   };
 
   const handleCloseChart = () => {
-    setFetchFeatures(false);
+    setFetchFeatures(null);
     showMap();
   };
 
@@ -305,7 +446,7 @@ const Map = () => {
       console.log(postBody);
       showLoadingModal();
       resetStates();
-      await getFeatures(postBody);
+      debouncedGetFeatures(postBody);
     }
   };
 
@@ -325,15 +466,29 @@ const Map = () => {
       console.log(postBody);
       showLoadingModal();
       resetStates();
-      await getFeatures(postBody);
+      debouncedGetFeatures(postBody);
     }
   };
 
-  const handleFlyToROI = (a_Zoom: number) => {
-    const coordinates = getCoordinatesFromMarkers();
-    mapObject.current!.fitBounds([coordinates[0], coordinates[1]], {
-      zoom: a_Zoom,
-    });
+  const handleFlyToROI = (a_To: EMarkerType,a_Zoom: number) => {
+    if(a_To == EMarkerType.polygon) {
+      const polygonLayer = mapObject.current!.getLayer("polygon");
+      const metadata = polygonLayer!.metadata as ILayerMetadata
+      const feature = metadata!.feature
+      const coordinates: [number, number][][] = feature.geometry.coordinates
+      mapObject.current!.fitBounds([coordinates[0][0], coordinates[0][1]], {
+        zoom: a_Zoom,
+      });
+    } 
+    if(a_To == EMarkerType.point) {
+      const circleLayer = mapObject.current!.getLayer("circle");
+      const metadata = circleLayer!.metadata as ILayerMetadata
+      const center = metadata!.center
+      mapObject.current!.fitBounds([center, center], {
+        zoom: a_Zoom,
+      });
+    }
+    
   };
 
   // Loading Map
@@ -387,18 +542,31 @@ const Map = () => {
     };
   }, []);
 
+  // Follow Changing Radius
+  useEffect(()=>{
+    radiusRef.current = radius
+    redrawCircle()
+  },[radius])
+
   // Handle Marker
   useEffect(() => {
     if (!mapObject.current) return;
 
     if (marker.polygon) {
-      mapObject.current.on("mousedown", handlePolygonMarker);
+      mapObject.current.on("mousedown", addPolygonMarker);
     } else {
-      mapObject.current.off("mousedown", handlePolygonMarker);
+      mapObject.current.off("mousedown", addPolygonMarker);
+    }
+
+    if (marker.point) {
+      mapObject.current.on("mousedown", addPointMarker);
+    } else {
+      mapObject.current.off("mousedown", addPointMarker);
     }
 
     return () => {
-      mapObject.current?.off("mousedown", handlePolygonMarker);
+      mapObject.current?.off("mousedown", addPolygonMarker);
+      mapObject.current?.off("mousedown", addPointMarker);
     };
   }, [marker]);
 
@@ -412,17 +580,19 @@ const Map = () => {
     }
 
     const polygonMarkers = markers.filter((m) => m.type == EMarkerType.polygon);
+    const pointMarker = markers.filter((m) => m.type == EMarkerType.point);
+
+    if (pointMarker.length === 0) {
+      showMap();
+      removeCircleLayer();
+    }
 
     if (polygonMarkers.length === 0) {
-      //setShowChart(false);
       showMap();
       removePolygonLayer();
-      return;
     }
 
     if (polygonMarkers.length < 4) {
-      //console.log("not enough polygon points");
-      //setShowChart(false);
       showMap();
       return;
     }
@@ -431,7 +601,6 @@ const Map = () => {
       const newPolygonMarker = polygonMarkers[polygonMarkers.length - 1].marker;
       const lngLat = newPolygonMarker.getLngLat();
 
-      //console.log("removing polygon");
       removePolygon();
 
       addMarker(
@@ -446,16 +615,6 @@ const Map = () => {
     //console.log(markers);
     drawPolygon(polygonMarkers);
   }, [markers]);
-
-  // Show ROI
-  /* useEffect(()=>{
-    if(showROI){
-      console.log("markers")
-      console.log(markers)
-      //drawPolygon(markers)
-    }
-  }
-  ,[showROI]) */
 
   // Read URLParams
   useEffect(() => {
@@ -531,83 +690,14 @@ const Map = () => {
 
   // 1. Get Features
   useEffect(() => {
-    if (fetchFeatures) {
-      const cloudCoverFilter: TCloudCoverFilter = {
-        op: "<=",
-        args: [
-          {
-            property: "eo:cloud_cover",
-          },
-          Number(cloudCover),
-        ],
-      };
-      const snowCoverFilter: TSnowCoverFilter = {
-        op: "<=",
-        args: [
-          {
-            property: "s2:snow_ice_percentage",
-          },
-          Number(snowCover),
-        ],
-      };
-      const datetimeFilter: TDateTimeFilter = {
-        op: "t_during",
-        args: [
-          {
-            property: "datetime",
-          },
-          {
-            interval: [startDate, endDate],
-          },
-        ],
-      };
-      const geometryFilter: TSpatialFilter = {
-        op: spatialOp,
-        args: [
-          {
-            property: "geometry",
-          },
-          {
-            type: "Polygon",
-            coordinates: [getCoordinatesFromMarkers()],
-          },
-        ],
-      };
-
-      let temporalFilter = "";
-
-      switch (temporalOp) {
-        case "t_during":
-          temporalFilter = `${startDate.substring(0, startDate.indexOf("T"))}/${endDate.substring(0, endDate.indexOf("T"))}`;
-          break;
-        case "t_after":
-          temporalFilter = `${startDate.substring(0, startDate.indexOf("T"))}/`;
-          break;
-        case "t_before":
-          temporalFilter = `/${endDate.substring(0, endDate.indexOf("T"))}`;
-          break;
-      }
-
-      const postBody: ISTACFilterRequest = {
-        sortby: [
-          {
-            field: "properties.datetime",
-            direction: "asc",
-          },
-        ],
-        collections: [ESTACCollections.Sentinel2l2a],
-        filter: {
-          op: "and",
-          args: [cloudCoverFilter, snowCoverFilter, geometryFilter],
-        },
-        datetime: temporalFilter,
-        limit: Number(limit),
-      };
-      console.log("Request");
-      console.log(postBody);
+    if (fetchFeatures !== null) {
+      fetchFeaturesRef.current = fetchFeatures
+      const postBody = getPostBody()
       showLoadingModal();
       resetStates();
       start = Date.now();
+      console.log("Request Body")
+      console.log(postBody)
       debouncedGetFeatures(postBody);
     } else {
       resetStates();
@@ -708,10 +798,24 @@ const Map = () => {
       {markers.filter((m) => m.type == EMarkerType.polygon).length === 4 ? (
         <div
           className={` ${mapStyle.flyTo}`}
-          onClick={() => handleFlyToROI(mapObject.current!.getZoom())}
+          onClick={() => handleFlyToROI(EMarkerType.polygon ,mapObject.current!.getZoom())}
         >
           <img
             src="/images/marker-fly.svg"
+            alt="marker-fly"
+            className={` ${mapStyle.flyToImage}`}
+          />
+        </div>
+      ) : (
+        <></>
+      )}
+      {markers.filter((m) => m.type == EMarkerType.point).length !== 0 ? (
+        <div
+          className={` ${mapStyle.flyTo} ${mapStyle.flyToPoint}`}
+          onClick={() => handleFlyToROI(EMarkerType.point, mapObject.current!.getZoom())}
+        >
+          <img
+            src="/images/leaf.svg"
             alt="marker-fly"
             className={` ${mapStyle.flyToImage}`}
           />

@@ -18,7 +18,9 @@ const CSelect = (props: ICSelectProps) => {
   };
 
   return (
-    <div className={` ${selectStyles.wrapper}`}>
+    <div className={` ${selectStyles.wrapper}`} 
+      style={{backgroundColor: props.disabled ? "grey" : "" }}
+    >
       <div className={` ${selectStyles.label}`}>{props.name}</div>
       <select
         className={` ${selectStyles.select}`}
@@ -27,7 +29,8 @@ const CSelect = (props: ICSelectProps) => {
         onChange={(v) => handleSelectChange(v)}
         disabled={props.disabled}
         style={{
-          color: props.disabled ? "darkgray" : "",
+          backgroundColor: props.disabled ? "grey" : "",
+          color: props.disabled ? "darkgrey" : "",
         }}
       >
         {props.options.map((option, index) => (

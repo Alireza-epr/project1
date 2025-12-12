@@ -1,3 +1,5 @@
+import { IFeature } from "./geoJSON";
+
 export enum EPastTime {
   days = "days",
   weeks = "weeks",
@@ -23,4 +25,11 @@ export enum ESampleFilter {
 export interface INDVIPanel {
   filter: ESampleFilter;
   coverageThreshold: number;
+}
+
+export type Units = "meters" | "metres" | "millimeters" | "millimetres" | "centimeters" | "centimetres" | "kilometers" | "kilometres" | "miles" | "nauticalmiles" | "inches" | "yards" | "feet" | "radians" | "degrees";
+
+export interface ILayerMetadata {
+  feature: IFeature,
+  center: [number, number]
 }

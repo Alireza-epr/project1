@@ -114,7 +114,7 @@ const Chart = (props: IChartProps) => {
         <ChartFooterItem title="Min NDVI" value={minNDVI} />
         <ChartFooterItem
           title="Latency"
-          value={props.latency ? `${props.latency.toFixed(1)} ms` : "-"}
+          value={props.latency ? `${(props.latency/1000).toFixed(2)} s` : "-"}
         />
         <ChartFooterItem title="Validity" value={getValidity()} />
       </div>

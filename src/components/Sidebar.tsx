@@ -44,6 +44,9 @@ const Sidebar = () => {
   const limit = useMapStore((state) => state.limit);
   const setLimit = useMapStore((state) => state.setLimit);
 
+  const radius = useMapStore((state) => state.radius);
+  const setRadius = useMapStore((state) => state.setRadius);
+
   const setTemporalOp = useMapStore((state) => state.setTemporalOp);
   const setSpatialOp = useMapStore((state) => state.setSpatialOp);
 
@@ -88,14 +91,14 @@ const Sidebar = () => {
 
   const handleClearPoint = () => {
     setMarkers((prev) => {
-      prev.forEach((m) => {
-        m.marker.remove();
-      });
-      return [];
+      const toRemove = prev.filter((m) => m.type === EMarkerType.point);
+      toRemove.forEach((m) => m.marker.remove());
+
+      return prev.filter((m) => m.type !== EMarkerType.point);
     });
   };
 
-  const handleClearPolygon = () => {
+  const handleClearZonal = () => {
     setMarkers((prev) => {
       const toRemove = prev.filter((m) => m.type === EMarkerType.polygon);
       toRemove.forEach((m) => m.marker.remove());
@@ -104,8 +107,12 @@ const Sidebar = () => {
     });
   };
 
-  const handleSetFetchFeatures = () => {
-    setFetchFeatures(!fetchFeatures);
+  const handleSetPolygonFetchFeatures = () => {
+    setFetchFeatures(EMarkerType.polygon);
+  };
+
+  const handleSetPointFetchFeatures = () => {
+    setFetchFeatures(EMarkerType.point);
   };
 
   const handleStartDateChange = (a_Date: string) => {
@@ -132,6 +139,10 @@ const Sidebar = () => {
     setLimit(a_Range);
   };
 
+  const handleRadiusChange = (a_Range: string) => {
+    setRadius(a_Range);
+  };
+  
   const handleSpatialClick = (a_Selected: string) => {
     setSpatialOp(spatialItems.find((i) => i.title == a_Selected)!.value);
   };
@@ -144,39 +155,99 @@ const Sidebar = () => {
     setSampleFilter(a_Type);
   };
 
+  const [ isSidebarDisabled, setIsSidebarDisabled ] = useState(false)
+
+  useEffect(()=>{
+    if(fetchFeatures !== null){
+      setIsSidebarDisabled(true)
+    } else {
+      setIsSidebarDisabled(false)
+    }
+  }, [fetchFeatures])
+
   return (
-    <div className={` ${sidebarStyles.wrapper}`}>
+    <div className={` ${sidebarStyles.wrapper}`} >
       <div className={` ${sidebarStyles.buttonsWrapper}`}>
-        <Section title="Drawing" disabled={fetchFeatures}>
+        <Section title="Drawing" disabled={isSidebarDisabled}>
+
           <div className={` ${sidebarStyles.buttonRowWrapper}`}>
             <CButton
-              title={"Marker"}
+              title={"Zonal"}
               active={marker.polygon}
               onButtonClick={handlePolygonClick}
-              icon="marker-add"
-              disable={fetchFeatures}
+              disable={isSidebarDisabled}
             />
             <CButton
-              title={"Clear Markers"}
-              onButtonClick={handleClearPoint}
-              disable={markers.length == 0 || fetchFeatures}
-              icon="marker-clear"
+              title={"Remove Zone"}
+              onButtonClick={handleClearZonal}
+              disable={markers.filter((m) => m.type == EMarkerType.polygon).length == 0 || isSidebarDisabled}
+            />
+            <CButton
+              title={"Chart of Zone"}
+              onButtonClick={handleSetPolygonFetchFeatures}
+              disable={
+                markers.filter((m) => m.type == EMarkerType.polygon).length < 4 || isSidebarDisabled
+              }
             />
           </div>
+
+          <div className={` ${sidebarStyles.buttonRowWrapper}`}>
+            <CButton
+              title={"Point"}
+              active={marker.point}
+              onButtonClick={handlePointClick}
+              disable={isSidebarDisabled}
+            />
+            <CButton
+              title={"Remove Point"}
+              onButtonClick={handleClearPoint}
+              disable={markers.filter((m) => m.type == EMarkerType.point).length == 0 || isSidebarDisabled}
+            />
+            <CButton
+              title={"Chart of Point"}
+              onButtonClick={handleSetPointFetchFeatures}
+              disable={
+                markers.filter((m) => m.type == EMarkerType.point).length === 0 || isSidebarDisabled
+              }
+            />
+          </div>
+          {`Radius - ${radius} meter(s)`}
+          <RangeInput
+            min={10}
+            value={radius}
+            onRangeChange={handleRadiusChange}
+          />
+
         </Section>
 
-        <Section title="STAC" disabled={fetchFeatures}>
-          <Section title="Start Date" disabled={fetchFeatures}>
+        <Section title="STAC" disabled={isSidebarDisabled}>
+          <Section title="Start Date" disabled={isSidebarDisabled}>
             <DateInput value={startDate} onDateChange={handleStartDateChange} />
           </Section>
 
-          <Section title="End Date" disabled={fetchFeatures}>
+          <Section title="End Date" disabled={isSidebarDisabled}>
             <DateInput value={endDate} onDateChange={handleEndDateChange} />
+          </Section>
+
+          <Section title="Operation" disabled={isSidebarDisabled}>
+            <CSelect
+              name="Temporal"
+              disabled={isSidebarDisabled}
+              options={temporalItems.map((i) => i.title)}
+              onSelectClick={handleTemporalClick}
+            />
+
+            <CSelect
+              name="Spatial"
+              disabled={isSidebarDisabled}
+              options={spatialItems.map((i) => i.title)}
+              onSelectClick={handleSpatialClick}
+            />
           </Section>
 
           <Section
             title={`Max Cloud Cover - ${cloudCover}%`}
-            disabled={fetchFeatures}
+            disabled={isSidebarDisabled}
           >
             <RangeInput
               value={cloudCover}
@@ -186,7 +257,7 @@ const Sidebar = () => {
 
           <Section
             title={`Max Snow Cover - ${snowCover}%`}
-            disabled={fetchFeatures}
+            disabled={isSidebarDisabled}
           >
             <RangeInput
               value={snowCover}
@@ -194,7 +265,7 @@ const Sidebar = () => {
             />
           </Section>
 
-          <Section title={`Page Limit - ${limit}`} disabled={fetchFeatures}>
+          <Section title={`Page Limit - ${limit}`} disabled={isSidebarDisabled}>
             <RangeInput
               value={limit}
               onRangeChange={handleLimitChange}
@@ -203,66 +274,42 @@ const Sidebar = () => {
           </Section>
         </Section>
 
-        <Section title="NDVI" disabled={fetchFeatures}>
+        <Section title="NDVI" disabled={isSidebarDisabled}>
           <Section
             title={`Min Coverage Threshold  - ${coverageThreshold}%`}
-            disabled={fetchFeatures}
+            disabled={isSidebarDisabled}
           >
             <RangeInput
               value={coverageThreshold}
               onRangeChange={handleCoverageThresholdChange}
             />
           </Section>
-          <Section title="Filter" disabled={fetchFeatures}>
+          <Section title="Filter" disabled={isSidebarDisabled}>
             <div className={` ${sidebarStyles.buttonRowWrapper}`}>
               <CButton
                 title={"No filter"}
                 onButtonClick={() => handleSampleFilter(ESampleFilter.none)}
                 active={sampleFilter == ESampleFilter.none}
-                disable={fetchFeatures}
+                disable={isSidebarDisabled}
               />
               <CButton
                 title={"Z-Score"}
                 onButtonClick={() => handleSampleFilter(ESampleFilter.zScore)}
                 active={sampleFilter == ESampleFilter.zScore}
-                disable={fetchFeatures}
+                disable={isSidebarDisabled}
               />
               <CButton
                 title={"IQR"}
                 onButtonClick={() => handleSampleFilter(ESampleFilter.IQR)}
                 active={sampleFilter == ESampleFilter.IQR}
-                disable={fetchFeatures}
+                disable={isSidebarDisabled}
               />
             </div>
           </Section>
         </Section>
 
-        <Section title="Chart">
-          <CSelect
-            name="Temporal"
-            disabled={fetchFeatures}
-            options={temporalItems.map((i) => i.title)}
-            onSelectClick={handleTemporalClick}
-          />
-
-          <CSelect
-            name="Spatial"
-            disabled={fetchFeatures}
-            options={spatialItems.map((i) => i.title)}
-            onSelectClick={handleSpatialClick}
-          />
-
-          <CButton
-            title={!fetchFeatures ? "Show Chart" : "Hide Chart"}
-            onButtonClick={handleSetFetchFeatures}
-            disable={
-              markers.filter((m) => m.type == EMarkerType.polygon).length < 4
-            }
-          />
-        </Section>
-
-        <Section title="ROI" disabled={fetchFeatures}>
-          <Coordinates disable={fetchFeatures} />
+        <Section title="ROI" disabled={isSidebarDisabled}>
+          <Coordinates disable={isSidebarDisabled} />
         </Section>
       </div>
     </div>

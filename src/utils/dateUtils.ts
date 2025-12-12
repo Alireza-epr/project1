@@ -32,7 +32,7 @@ export const getLocaleISOString = (a_Date: Date, a_Past?: IPastTime) => {
     year: "numeric",
   });
 
-  return `${localeDateISO}_${localeTimeISO}`;
+  return `${localeDateISO}T${localeTimeISO}`;
 };
 
 export const getDatetime = (a_Datetime: string) => {
