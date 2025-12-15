@@ -29,6 +29,7 @@ export interface INDVISmoothed {
 }
 
 export interface INDVISample {
+  featureId: string,
   id: number;
   datetime: string;
   preview: string;

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import ChartFooterItem from "./ChartFooterItem";
 import ChartHeaderItem from "./ChartHeaderItem";
 import ChartListRows from "./ChartListRows";
+import ChartSummaryRows from "./ChartSummaryRows";
+import { IChartSummaryRow } from "./ChartSummaryRow";
 import { downloadCSV, toFirstLetterUppercase } from "../utils/generalUtils";
 import { getSmoothNDVISamples } from "../utils/calculationUtils";
 
@@ -33,6 +35,14 @@ const Chart = (props: IChartProps) => {
 
   const [showList, setShowList] = useState(false);
   const [showToggleChart, setShowToggleChart] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryItems, setSummaryItems] = useState<IChartSummaryRow[]>([
+    { id:1, title: "Total / Used Scenes", value: "-" },
+    { id:2, title: "Average Valid Pixels", value: "-" },
+    { id:3, title: "First Date", value: "-" },
+    { id:4, title: "Last Date", value: "-" },
+    { id:5, title: "Latency", value: "-" },
+  ])
   const [showSmoothChart, setShowSmoothChart] = useState(false);
   const [smoothed, setSmoothed] = useState(false);
 
@@ -91,12 +101,57 @@ const Chart = (props: IChartProps) => {
   };
 
   const handleListItems = () => {
+    setShowSummary(false)
     setShowList(!showList);
   };
 
   const handleToggleChart = () => {
     const nextFetchFeatures = fetchFeatures === EMarkerType.polygon ? EMarkerType.point : EMarkerType.polygon
     setFetchFeatures(nextFetchFeatures)
+  }
+
+  const getLatency = () => props.latency ? `${(props.latency/1000).toFixed(2)} s` : "-"
+
+  const getValidFraction = (a_Fraction: `${string}%` | `${number}%` | "N/A") =>{
+    if(a_Fraction == "N/A") return 0
+    const num = a_Fraction.substring( 0, a_Fraction.indexOf("%")  )
+    return Number(num)
+  }
+
+  const handleToggleSummary = (a_AllSamples: INDVISample[]) => {
+    setShowList(false)
+    setShowSummary(!showSummary)
+
+    // Total / Used Scenes
+    const validsLen = a_AllSamples.filter( s => s.meanNDVI ).length
+    const totalUsed = `${validsLen} / ${a_AllSamples.length}`
+
+    // Average Valid Pixels
+    const sumValidPixels = 
+    a_AllSamples
+    .filter( s => s.meanNDVI )
+    .map( s => getValidFraction(s.valid_fraction) )
+    .reduce( (a, b) => a + b , 0 )
+    const averageValidPixels = (sumValidPixels / validsLen).toFixed(2)
+
+    // First / Last Date
+    const sortedValids = 
+    a_AllSamples
+    .filter( s => s.meanNDVI )
+    .sort( (a, b) => a.id - b.id )
+
+    const firstDate = sortedValids[0].datetime
+    const lastDate = sortedValids[ validsLen - 1 ].datetime
+    
+    setSummaryItems([
+      { id:1, title: "Total / Used Scenes", value: totalUsed },
+      { id:2, title: "Average Valid Pixels", value: averageValidPixels },
+      { id:3, title: "First Date", value: firstDate },
+      { id:4, title: "Last Date", value: lastDate },
+      { id:5, title: "Latency", value: getLatency() },
+    ])
+
+
   }
 
   const handleSmoothChart = () => {
@@ -139,15 +194,23 @@ const Chart = (props: IChartProps) => {
             `Chart of ${fetchFeatures == EMarkerType.point ? toFirstLetterUppercase(fetchFeatures) : 'Zonal' } ${smoothed ? '(smoothed)' : '(raw)'}`
           }
         </div>
+        <ChartHeaderItem title="Series Summary" alt="Series Summary" onClick={()=>handleToggleSummary([...samples, ...notValidSamples])} icon="info" disabled={[...samples, ...notValidSamples].length == 0} active={showSummary}/>
         <ChartHeaderItem title="Export CSV" alt="Export CSV" onClick={()=>handleExportCSV([...samples, ...notValidSamples])} icon="export-csv" disabled={[...samples, ...notValidSamples].length == 0}/>
         <ChartHeaderItem title="Smooth Chart" alt="Smooth Chart" onClick={handleSmoothChart} icon="smoothing" disabled={!showSmoothChart} active={smoothed}/>
         <ChartHeaderItem title="Toggle Chart" alt="Toggle Chart" onClick={handleToggleChart} icon="toggle" disabled={!showToggleChart} />
-        <ChartHeaderItem title="List" alt="List" onClick={handleListItems} icon="list" />
+        <ChartHeaderItem title="List" alt="List" onClick={handleListItems} icon="list" active={showList}/>
         <ChartHeaderItem title="Close Chart" alt="Close" onClick={props.onClose} >X</ChartHeaderItem>
       </div>
       {showList ? (
         <div className={` ${chartStyles.listWrapper}`}>
           <ChartListRows items={[...samples, ...notValidSamples]} />
+        </div>
+      ) : (
+        <></>
+      )}
+      {showSummary ? (
+        <div className={` ${chartStyles.listWrapper}`}>
+          <ChartSummaryRows items={summaryItems}/>
         </div>
       ) : (
         <></>
@@ -185,7 +248,7 @@ const Chart = (props: IChartProps) => {
         <ChartFooterItem title="Min NDVI" value={minNDVI} />
         <ChartFooterItem
           title="Latency"
-          value={props.latency ? `${(props.latency/1000).toFixed(2)} s` : "-"}
+          value={ getLatency() }
         />
         <ChartFooterItem title="Validity" value={getValidity()} />
       </div>

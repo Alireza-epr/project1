@@ -1,6 +1,7 @@
 import chartListRowItem from "./ChartListRowItem.module.scss";
 
 export interface IChartListRowItemProps {
+  isSummaryItem?: boolean;
   isHeaderItem?: boolean;
   isSceneNotValid?: boolean;
   title: string;
@@ -18,6 +19,9 @@ const ChartListRowItem = (props: IChartListRowItemProps) => {
           : props.isHeaderItem
             ? "#476d6c"
             : "#3aac1aff",
+        margin: props.isSummaryItem 
+          ? "0 1vh"
+          : "", 
       }}
     >
       <div className={` ${chartListRowItem.item}`}>{props.children}</div>

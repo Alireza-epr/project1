@@ -224,6 +224,7 @@ export const getNDVISample = (
   const medianNDVI = getMedianNDVI(ndviArray);
 
   return {
+    featureId: a_Feature.id,
     id: a_Id,
     datetime: a_Feature.properties.datetime,
     preview: a_Feature.assets.rendered_preview.href,

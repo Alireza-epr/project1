@@ -186,6 +186,7 @@ export const useNDVI = () => {
         setDoneFeature((prev) => ++prev);
       } catch (error: any) {
         const ndviSampleNotValid: INDVISample = {
+          featureId: feature.id,
           id: countId,
           datetime: feature.properties.datetime,
           preview: feature.assets.rendered_preview.href,
