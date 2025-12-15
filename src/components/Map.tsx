@@ -861,14 +861,18 @@ const Map = () => {
         <></>
       )}
       {showError ? (
-        <Chart onClose={handleCloseChart}>
+        <Chart 
+          onClose={handleCloseChart} 
+          onNext={handleNextPageChart}
+          onPrevious={handlePreviousPageChart}
+        >
           <div className={` ${mapStyle.errorWrapper}`}>
             <div className={` ${mapStyle.error}`}>
               {responseFeatures &&
               responseFeatures.features &&
               responseFeatures?.features.length == 0
                 ? "No STAC Item found!"
-                : "Problem by getting NDVI samples!"}
+                : "Problem with getting NDVI samples! Check the list for more information."}
             </div>
           </div>
         </Chart>

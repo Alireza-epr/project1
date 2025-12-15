@@ -272,6 +272,7 @@ const Sidebar = () => {
               value={limit}
               onRangeChange={handleLimitChange}
               max={50}
+              min={1}
             />
           </Section>
         </Section>
