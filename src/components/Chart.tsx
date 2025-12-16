@@ -144,7 +144,7 @@ const Chart = (props: IChartProps) => {
     const lastDate = sortedValids[ validsLen - 1 ].datetime
     
     setSummaryItems([
-      { id:1, title: "Total / Used Scenes", value: totalUsed },
+      { id:1, title: "Used / Total Scenes", value: totalUsed },
       { id:2, title: "Average Valid Pixels", value: averageValidPixels },
       { id:3, title: "First Date", value: firstDate },
       { id:4, title: "Last Date", value: lastDate },

@@ -763,8 +763,10 @@ const Map = () => {
         }
       }
     } else {
+      if(responseFeatures && responseFeatures.features.length !== 0){
+        showErrorModal()
+      }
       resetStates();
-      showErrorModal()
     }
   }, [tokenCollection]);
   useEffect(() => {
