@@ -25,7 +25,7 @@ export const useFilterSTAC = () => {
   const getFeatures = async (a_STACRequest: ISTACFilterRequest) => {
     if (cache.getCache(a_STACRequest)) {
       const respJSON = cache.getCache(a_STACRequest);
-      console.log("Cached Features");
+      console.log("Cached Features hit");
       console.log(respJSON);
       setResponseFeatures(respJSON);
       return;
@@ -56,7 +56,7 @@ export const useFilterSTAC = () => {
         }
 
         const respJSON = await resp.json();
-        console.log("Features");
+        console.log("Cached Features missed");
         console.log(respJSON);
         cache.setCache(a_STACRequest, respJSON);
         setResponseFeatures(respJSON);
@@ -112,7 +112,7 @@ export const useNDVI = () => {
         //console.log(new Date(Date.now()).toISOString()+" Start Calculating NDVI for STAC Item id "+ feature.id)
         const cacheKey = `${JSON.stringify(a_Coordinates)}_${feature.id}_${JSON.stringify(a_NDVIPanel)}`;
         if (cache.getCache(cacheKey)) {
-          console.log("Cached NDVI");
+          console.log("Cached NDVI hit");
           const cachedNDVI = cache.getCache(cacheKey) as INDVISample;
           console.log(cachedNDVI);
           if (cachedNDVI.meanNDVI) {
@@ -175,7 +175,8 @@ export const useNDVI = () => {
           );
           //console.log(new Date(Date.now()).toISOString()+ " " +featureNDVI.length + " pixels from the Sentinel-2 image for the given ROI")
           //console.log(new Date(Date.now()).toISOString()+" NDVI for "+ feature.id)
-
+          console.log("Cached NDVI missed");
+          console.log(ndviSample);
           cache.setCache(cacheKey, ndviSample);
           setSamples((prev) => [...prev, ndviSample]);
         } else {
