@@ -3,7 +3,7 @@ import { useRef, useEffect, useCallback, use, useState } from "react";
 import maplibregl from "maplibre-gl";
 import { Map as MapLibre } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { EMarkerType, IMarker, useMapStore } from "../store/mapStore";
+import { EMarkerType, IMarker, TMarker, useMapStore } from "../store/mapStore";
 import type { Feature, Polygon } from "geojson";
 import { useFilterSTAC, useNDVI, useTokenCollection } from "../lib/stac";
 import {
@@ -18,17 +18,20 @@ import {
   ESTACCollections,
   EStacLinkRel,
   ISTACFilterRequest,
+  ITemporalItem,
+  spatialItems,
   TCloudCoverFilter,
   TDateTimeFilter,
   TSnowCoverFilter,
   TSpatialFilter,
 } from "../types/apiTypes";
 import Loading from "./Loading";
-import { ELoadingSize, ILayerMetadata, INDVIPanel, Units } from "../types/generalTypes";
+import { ELoadingSize, ESampleFilter, ILayerMetadata, INDVIPanel, Units } from "../types/generalTypes";
 import Chart from "./Chart";
 import { debounce, throttle } from "../utils/apiUtils";
 import CustomTooltip from "./CustomTooltip";
 import circle from "@turf/circle"
+import { isDateValid, isOperatorValid, isROIValid, isValidBoolean, isValidFilter, isValidRange } from "../utils/generalUtils";
 
 let start: number, end: number;
 
@@ -78,7 +81,15 @@ const Map = () => {
   const setResponseFeatures = useMapStore((state) => state.setResponseFeatures);
   const setErrorFeatures = useMapStore((state) => state.setErrorFeatures);
   const setErrorNDVI = useMapStore((state) => state.setErrorNDVI);
-
+  const setTemporalOp = useMapStore((state) => state.setTemporalOp);
+  const setSpatialOp = useMapStore((state) => state.setSpatialOp);
+  const setSnowCover = useMapStore((state) => state.setSnowCover);
+  const setLimit = useMapStore((state) => state.setLimit);
+  const setCoverageThreshold = useMapStore((state) => state.setCoverageThreshold);
+  const setSampleFilter = useMapStore((state) => state.setSampleFilter);
+  const setSmoothing = useMapStore((state) => state.setSmoothing);
+  const setRadius = useMapStore((state) => state.setRadius);
+  
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapObject = useRef<MapLibre | null>(null);
 
@@ -622,41 +633,157 @@ const Map = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
-    const polygonCoordsParam = params.get("roi");
-    const startDateParam = params.get("startDate");
-    const endDateParam = params.get("endDate");
-    const cloudParam = params.get("cloud");
+    // point or zonal
+    const pointROI = params.get("point-roi");
+    const zonalROI = params.get("zonal-roi");
 
-    if (polygonCoordsParam) {
-      let polygonCoords: [number, number][] = JSON.parse(polygonCoordsParam);
-
-      // Clear polygon points
-      setMarkers((prev) => {
-        const pointMarkers = prev.filter((m) => m.type === EMarkerType.point);
-
-        return pointMarkers;
-      });
-
-      // Add polygon markers
-      setTimeout(() => {
-        polygonCoords.forEach((coordinate) => {
-          const [lng, lat] = coordinate;
+    if(pointROI){
+      if(isROIValid(pointROI, EMarkerType.point)){
+        removeCircleLayer()
+        removeMarker(EMarkerType.point)
+        
+        setTimeout(() => {
           if (!mapObject.current) {
-            console.log("Map is not ready to set markers from URL");
+            console.warn("Failed to use URLParam: Map is not ready");
             return;
           }
-          addMarker([lng, lat], mapObject.current, EMarkerType.polygon);
-        });
-      }, 100);
+          const parsedROI = JSON.parse(pointROI) as [ [number, number], string ]
+          const [center, radius] = parsedROI 
+          addMarker(center, mapObject.current, EMarkerType.point, {color: "green"});
+          setRadius(radius)
+          drawCircle(center)
+        }, 100);
+      } else {
+        console.warn("Failed to use URLParam: pointROI does not match")
+      }
+    }  
+    if(zonalROI){
+      if(isROIValid(zonalROI, EMarkerType.polygon)){
+        removePolygonLayer()
+        removeMarker(EMarkerType.polygon)
+        setTimeout(() => {
+          const parsedROI: [number, number][] = JSON.parse(zonalROI);
+          console.log("parsedROI")
+          console.log(parsedROI)
+          parsedROI.forEach((coordinate) => {
+            const [lng, lat] = coordinate;
+            if (!mapObject.current) {
+              console.warn("Failed to use URLParam: Map is not ready");
+              return;
+            }
+            addMarker([lng, lat], mapObject.current, EMarkerType.polygon);
+          });
+        }, 100);
+
+      } else {
+        console.warn("Failed to use URLParam: zonalROI does not match")
+      }
+    } 
+
+    // start and end date + temporalOp
+    const startDateParam = params.get("startDate");
+    const endDateParam = params.get("endDate");
+    let temporal: ITemporalItem = { title: "During", value: "t_during" }
+
+    let isStartValid = false
+    let isEndValid = false
+    if(startDateParam){
+      if(isDateValid(startDateParam)){
+        setStartDate(startDateParam)
+        isStartValid = true
+      } else {
+        console.warn("Failed to use URLParam: startDate does not match");
+      }
     }
-    if (startDateParam) {
-      setStartDate(startDateParam);
+    if(endDateParam){
+      if(isDateValid(endDateParam)){
+        setEndDate(endDateParam)
+        isEndValid = true
+      } else {
+        console.warn("Failed to use URLParam: endDate does not match");
+      }
     }
-    if (endDateParam) {
-      setEndDate(endDateParam);
+
+    if (isStartValid && isEndValid) {
+      temporal = { title: "During", value: "t_during" };
+      setTemporalOp(temporal.value)
+    } else if (isStartValid) {
+      temporal = { title: "After Start", value: "t_after" };
+      setTemporalOp(temporal.value)
+    } else if (isEndValid) {
+      temporal = { title: "Before End", value: "t_before" };
+      setTemporalOp(temporal.value)
     }
+
+    // Spatial Op
+    const operator = params.get("operator")
+    if(operator){
+      if(isOperatorValid(operator)){
+        setSpatialOp(spatialItems.find((i) => i.title.toLowerCase() == operator.toLowerCase())!.value )
+      } else {
+        console.warn("Failed to use URLParam: operator does not match");
+      }
+    }
+
+    // Cloud
+    const cloudParam = params.get("cloud");
     if (cloudParam) {
-      setCloudCover(cloudParam);
+      if(isValidRange(cloudParam, 0, 100)){
+        setCloudCover(cloudParam);
+      } else {
+        console.warn("Failed to use URLParam: cloud does not match");
+      }
+    }
+
+    // Snow
+    const snowParam = params.get("snow");
+    if (snowParam) {
+      if(isValidRange(snowParam, 0, 100)){
+        setSnowCover(snowParam);
+      } else {
+        console.warn("Failed to use URLParam: snow does not match");
+      }
+    }
+
+    // Limit
+    const limitParam = params.get("limit");
+    if (limitParam) {
+      if(isValidRange(limitParam, 1, 50)){
+        setLimit(limitParam);
+      } else {
+        console.warn("Failed to use URLParam: limit does not match");
+      }
+    }
+
+    // Coverage
+    const coverageParam = params.get("coverage");
+    if (coverageParam) {
+      if(isValidRange(coverageParam, 0, 100)){
+        setCoverageThreshold(coverageParam);
+      } else {
+        console.warn("Failed to use URLParam: coverage does not match");
+      }
+    }
+
+    // Outlier Rejection
+    const filterParam = params.get("filter") as ESampleFilter;
+    if (filterParam) {
+      if(isValidFilter(filterParam)){
+        setSampleFilter([ "none", "z-score", "IQR" ].find((i) => i.toLowerCase() == filterParam.toLowerCase()) as ESampleFilter);
+      } else {
+        console.warn("Failed to use URLParam: filter does not match");
+      }
+    }
+
+    // Smoothing
+    const smoothingParam = params.get("smoothing");
+    if (smoothingParam) {
+      if(isValidBoolean(smoothingParam)){
+        const isTrue = smoothingParam == "true"
+        setSmoothing(isTrue);
+      } else {
+        console.warn("Failed to use URLParam: smoothing does not match");
+      }
     }
   }, []);
 

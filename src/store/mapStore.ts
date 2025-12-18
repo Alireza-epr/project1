@@ -58,6 +58,7 @@ export interface IMapStoreStates {
   showError: boolean;
   fetchFeatures: EMarkerType | null;
   globalLoading: boolean;
+  smoothing: boolean;
   samples: INDVISample[];
   notValidSamples: INDVISample[];
   responseFeatures: IStacSearchResponse | null;
@@ -93,6 +94,7 @@ export interface IMapStoreActions {
       | ((prev: EMarkerType | null) => EMarkerType | null),
   ) => void;
   setGlobalLoading: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
+  setSmoothing: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setSamples: (
     a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
   ) => void;
@@ -178,6 +180,7 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       samples: [] as INDVISample[],
       sampleFilter: ESampleFilter.none,
       notValidSamples: [] as INDVISample[],
+      smoothing: false,
     },
     (set) => ({
       // Actions
@@ -321,6 +324,14 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
           globalLoading:
             typeof a_Value === "function"
               ? a_Value(state.globalLoading)
+              : a_Value,
+        })),
+      
+      setSmoothing: (a_Value) =>
+        set((state) => ({
+          smoothing:
+            typeof a_Value === "function"
+              ? a_Value(state.smoothing)
               : a_Value,
         })),
 

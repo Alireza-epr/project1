@@ -1,4 +1,5 @@
-import { INDVISample } from "src/store/mapStore"
+import { spatialItems } from "../types/apiTypes"
+import { EMarkerType, INDVISample } from "../store/mapStore"
 import { getLocaleISOString } from "./dateUtils"
 
 export const toFirstLetterUppercase = (a_String: string | null) => {
@@ -52,3 +53,66 @@ export const downloadCSV = (a_NDVISamples: INDVISample[]) => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 };
+
+export const isROIValid = (a_ROI: string, a_Marker: EMarkerType) => {
+    let roi: any;
+
+    try {
+        roi = JSON.parse(a_ROI);
+    } catch {
+        return false;
+    }
+
+    switch(a_Marker){
+        case EMarkerType.point: {
+            // Expected: [[lng, lat], radius]
+            if(!Array.isArray(roi) || roi.length !== 2) return false
+
+            const [ center, radius ] = roi
+            if(!Array.isArray(center) || center.length !== 2) return false
+            for(const c of center){
+                if(isNaN(Number(c))) return false 
+            }
+
+            if( isNaN(Number(radius)) || Number(radius) <= 0) return false
+
+            return true
+        }
+        case EMarkerType.polygon:{
+            // Expected: [[lng, lat], [lng, lat], ...]
+            if(!Array.isArray(roi) && roi.length < 4 ) return false
+
+            for(const coordinate of roi){
+                if(!Array.isArray(coordinate) || coordinate.length !== 2) return false
+                for(const l of coordinate){
+                    if(isNaN(Number(l))) return false
+                }
+            }
+            return true
+        }
+        default: return false
+    }
+} 
+
+export const isDateValid = (a_Datetime: string) => {
+    // Expected: 2025-12-12T09:48:12
+    const regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+    return regex.test(a_Datetime);
+}
+
+export const isOperatorValid = (a_Op: string) => {
+    return spatialItems.findIndex( s => s.title.toLowerCase() == a_Op.toLowerCase() ) !== -1
+}
+
+export const isValidRange = (a_num: string, a_Min: number, a_Max: number) => {
+    const number = Number(a_num)
+    return !isNaN(number) && number >= a_Min && number <= a_Max
+}
+
+export const isValidFilter = (a_Filter: string) => {
+    return [ "none", "z-score", "IQR" ].map( i => i.toLowerCase() ).includes(a_Filter.toLowerCase())
+}
+
+export const isValidBoolean = (a_Boolean: string) => {
+    return [ "false", "true" ].map( i => i.toLowerCase() ).includes(a_Boolean.toLowerCase())
+}

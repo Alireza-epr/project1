@@ -2,6 +2,7 @@ import { useRef } from "react";
 import selectStyles from "./CSelect.module.scss";
 
 export interface ICSelectProps {
+  value: string;
   name: string;
   onSelectClick: (a_Selected: string) => void;
   disabled?: boolean;
@@ -32,6 +33,7 @@ const CSelect = (props: ICSelectProps) => {
           backgroundColor: props.disabled ? "grey" : "",
           color: props.disabled ? "darkgrey" : "",
         }}
+        value={props.value}
       >
         {props.options.map((option, index) => (
           <option

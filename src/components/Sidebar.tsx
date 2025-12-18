@@ -47,11 +47,17 @@ const Sidebar = () => {
   const radius = useMapStore((state) => state.radius);
   const setRadius = useMapStore((state) => state.setRadius);
 
+  const temporalOp = useMapStore((state) => state.temporalOp);
   const setTemporalOp = useMapStore((state) => state.setTemporalOp);
+
+  const spatialOp = useMapStore((state) => state.spatialOp);
   const setSpatialOp = useMapStore((state) => state.setSpatialOp);
 
   const sampleFilter = useMapStore((state) => state.sampleFilter);
   const setSampleFilter = useMapStore((state) => state.setSampleFilter);
+
+  const smoothing = useMapStore((state) => state.smoothing);
+  const setSmoothing = useMapStore((state) => state.setSmoothing);
 
   const handlePointClick = () => {
     setMarker((prev) => {
@@ -155,6 +161,10 @@ const Sidebar = () => {
     setSampleFilter(a_Type);
   };
 
+  const handleChangeSmoothing = (a_State: boolean) => {
+    setSmoothing(a_State)
+  }
+
   const [ isSidebarDisabled, setIsSidebarDisabled ] = useState(false)
 
   useEffect(()=>{
@@ -224,11 +234,11 @@ const Sidebar = () => {
 
         <Section title="STAC" disabled={isSidebarDisabled}>
           <Section title="Start Date" disabled={isSidebarDisabled}>
-            <DateInput value={startDate} onDateChange={handleStartDateChange} />
+            <DateInput value={startDate} onDateChange={handleStartDateChange} disabled={isSidebarDisabled}/>
           </Section>
 
           <Section title="End Date" disabled={isSidebarDisabled}>
-            <DateInput value={endDate} onDateChange={handleEndDateChange} />
+            <DateInput value={endDate} onDateChange={handleEndDateChange} disabled={isSidebarDisabled}/>
           </Section>
 
           <Section title="Operation" disabled={isSidebarDisabled}>
@@ -237,6 +247,7 @@ const Sidebar = () => {
               disabled={isSidebarDisabled}
               options={temporalItems.map((i) => i.title)}
               onSelectClick={handleTemporalClick}
+              value={temporalItems.find((i) => i.value == temporalOp)!.title}
             />
 
             <CSelect
@@ -244,6 +255,7 @@ const Sidebar = () => {
               disabled={isSidebarDisabled}
               options={spatialItems.map((i) => i.title)}
               onSelectClick={handleSpatialClick}
+              value={spatialItems.find((i) => i.value == spatialOp)!.title}
             />
           </Section>
 
@@ -305,6 +317,22 @@ const Sidebar = () => {
                 title={"IQR"}
                 onButtonClick={() => handleSampleFilter(ESampleFilter.IQR)}
                 active={sampleFilter == ESampleFilter.IQR}
+                disable={isSidebarDisabled}
+              />
+            </div>
+          </Section>
+          <Section title="Smoothing" disabled={isSidebarDisabled}>
+            <div className={` ${sidebarStyles.buttonRowWrapper}`}>
+              <CButton
+                title={"Yes"}
+                onButtonClick={() => handleChangeSmoothing(true)}
+                active={smoothing}
+                disable={isSidebarDisabled}
+              />
+              <CButton
+                title={"No"}
+                onButtonClick={() => handleChangeSmoothing(false)}
+                active={!smoothing}
                 disable={isSidebarDisabled}
               />
             </div>

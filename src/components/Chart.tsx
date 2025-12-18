@@ -26,6 +26,9 @@ const Chart = (props: IChartProps) => {
   const globalLoading = useMapStore((state) => state.globalLoading);
   const setFetchFeatures = useMapStore((state) => state.setFetchFeatures);
 
+  const smoothing = useMapStore((state) => state.smoothing);
+  const setSmoothing = useMapStore((state) => state.setSmoothing);
+
   const nextPage = useMapStore((state) => state.nextPage);
   const previousPage = useMapStore((state) => state.previousPage);
   const notValidSamples = useMapStore((state) => state.notValidSamples);
@@ -44,7 +47,7 @@ const Chart = (props: IChartProps) => {
     { id:5, title: "Latency", value: "-" },
   ])
   const [showSmoothChart, setShowSmoothChart] = useState(false);
-  const [smoothed, setSmoothed] = useState(false);
+  //const [smoothed, setSmoothed] = useState(false);
 
   let notSmoothedSamples = useRef<INDVISample[]>([])
 
@@ -155,7 +158,7 @@ const Chart = (props: IChartProps) => {
   }
 
   const handleSmoothChart = () => {
-    setSmoothed(!smoothed)
+    setSmoothing(!smoothing)
   }
 
   const handleExportCSV = (a_Samples: INDVISample[]) => {
@@ -178,25 +181,25 @@ const Chart = (props: IChartProps) => {
   }
 
   useEffect(()=> {
-    if(smoothed){
+    if(smoothing){
       const smoothedNDVISamples = getSmoothNDVISamples(samples)
       setSamples(smoothedNDVISamples)
     } else {
       setSamples(notSmoothedSamples.current)
     }
-  }, [smoothed])
+  }, [smoothing])
 
   return (
     <div className={` ${chartStyles.wrapper}`}>
       <div className={` ${chartStyles.buttonsWrapper}`}>
         <div className={` ${chartStyles.title}`}>
           {
-            `Chart of ${fetchFeatures == EMarkerType.point ? toFirstLetterUppercase(fetchFeatures) : 'Zonal' } ${smoothed ? '(smoothed)' : '(raw)'}`
+            `Chart of ${fetchFeatures == EMarkerType.point ? toFirstLetterUppercase(fetchFeatures) : 'Zonal' } ${smoothing ? '(smoothed)' : '(raw)'}`
           }
         </div>
         <ChartHeaderItem title="Series Summary" alt="Series Summary" onClick={()=>handleToggleSummary([...samples, ...notValidSamples])} icon="info" disabled={[...samples, ...notValidSamples].length == 0} active={showSummary}/>
         <ChartHeaderItem title="Export CSV" alt="Export CSV" onClick={()=>handleExportCSV([...samples, ...notValidSamples])} icon="export-csv" disabled={[...samples, ...notValidSamples].length == 0}/>
-        <ChartHeaderItem title="Smooth Chart" alt="Smooth Chart" onClick={handleSmoothChart} icon="smoothing" disabled={!showSmoothChart} active={smoothed}/>
+        <ChartHeaderItem title="Smooth Chart" alt="Smooth Chart" onClick={handleSmoothChart} icon="smoothing" disabled={!showSmoothChart} active={smoothing}/>
         <ChartHeaderItem title="Toggle Chart" alt="Toggle Chart" onClick={handleToggleChart} icon="toggle" disabled={!showToggleChart} />
         <ChartHeaderItem title="List" alt="List" onClick={handleListItems} icon="list" active={showList}/>
         <ChartHeaderItem title="Close Chart" alt="Close" onClick={props.onClose} >X</ChartHeaderItem>
