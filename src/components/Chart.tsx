@@ -5,7 +5,7 @@ import {
   useMapStore,
 } from "../store/mapStore";
 import chartStyles from "./Chart.module.scss";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ChartFooterItem from "./ChartFooterItem";
 import ChartHeaderItem from "./ChartHeaderItem";
 import ChartListRows from "./ChartListRows";
@@ -88,7 +88,7 @@ const Chart = (props: IChartProps) => {
       setMeanNDVI(0);
       setMinNDVI(0);
     }
-  }, [globalLoading]);
+  }, [samples]);
 
   useEffect(() => {
     const hasPolygon =
@@ -142,37 +142,39 @@ const Chart = (props: IChartProps) => {
     return Number(num);
   };
 
-  const handleToggleSummary = (a_AllSamples: INDVISample[]) => {
-    setShowList(false);
-    setShowSummary(!showSummary);
+  const handleToggleSummary = useCallback(
+    (a_AllSamples: INDVISample[]) => {
+      setShowList(false);
+      setShowSummary(!showSummary);
 
-    // Total / Used Scenes
-    const validsLen = a_AllSamples.filter((s) => s.meanNDVI).length;
-    const totalUsed = `${validsLen} / ${a_AllSamples.length}`;
+      // Total / Used Scenes
+      const validsLen = a_AllSamples.filter((s) => s.meanNDVI).length;
+      const totalUsed = `${validsLen} / ${a_AllSamples.length}`;
 
-    // Average Valid Pixels
-    const sumValidPixels = a_AllSamples
-      .filter((s) => s.meanNDVI)
-      .map((s) => getValidFraction(s.valid_fraction))
-      .reduce((a, b) => a + b, 0);
-    const averageValidPixels = validsLen !== 0 ? (sumValidPixels / validsLen).toFixed(2) : "-" ;
+      // Average Valid Pixels
+      const sumValidPixels = a_AllSamples
+        .filter((s) => s.meanNDVI)
+        .map((s) => getValidFraction(s.valid_fraction))
+        .reduce((a, b) => a + b, 0);
+      const averageValidPixels = validsLen !== 0 ? (sumValidPixels / validsLen).toFixed(2) : "-" ;
 
-    // First / Last Date
-    const sortedValids = a_AllSamples
-      .filter((s) => s.meanNDVI)
-      .sort((a, b) => a.id - b.id);
+      // First / Last Date
+      const sortedValids = a_AllSamples
+        .filter((s) => s.meanNDVI)
+        .sort((a, b) => a.id - b.id);
 
-    const firstDate = validsLen !== 0 ? sortedValids[0].datetime : "-" ;
-    const lastDate = validsLen !== 0 ? sortedValids[validsLen - 1].datetime : "-" ;
+      const firstDate = validsLen !== 0 ? sortedValids[0].datetime : "-" ;
+      const lastDate = validsLen !== 0 ? sortedValids[validsLen - 1].datetime : "-" ;
 
-    setSummaryItems([
-      { id: 1, title: "Used / Total Scenes", value: totalUsed },
-      { id: 2, title: "Average Valid Pixels", value: averageValidPixels },
-      { id: 3, title: "First Date", value: firstDate },
-      { id: 4, title: "Last Date", value: lastDate },
-      { id: 5, title: "Latency", value: getLatency() },
-    ]);
-  };
+      setSummaryItems([
+        { id: 1, title: "Used / Total Scenes", value: totalUsed },
+        { id: 2, title: "Average Valid Pixels", value: averageValidPixels },
+        { id: 3, title: "First Date", value: firstDate },
+        { id: 4, title: "Last Date", value: lastDate },
+        { id: 5, title: "Latency", value: getLatency() },
+      ]);
+    }
+  ,[showSummary, props.latency]);
 
   const handleToggleSmoothingOptions = () => {
     showShowSmoothingOptions(!showSmoothingOptions)
@@ -182,16 +184,17 @@ const Chart = (props: IChartProps) => {
     setSmoothingWindow(a_Window)
   }
 
-  const handleExportCSV = (a_Samples: INDVISample[]) => {
-    const validSamples = a_Samples.filter((s) => s.meanNDVI);
-    const notValidSamples = a_Samples.filter((s) => !s.meanNDVI);
-    const allSamples = [...validSamples, ...notValidSamples].sort(
-      (a, b) => a.id - b.id,
-    );
+  const handleExportCSV = useCallback(
+    (a_Samples: INDVISample[]) => {
+      const validSamples = a_Samples.filter((s) => s.meanNDVI);
+      const notValidSamples = a_Samples.filter((s) => !s.meanNDVI);
+      const allSamples = [...validSamples, ...notValidSamples].sort(
+        (a, b) => a.id - b.id,
+      );
 
-    downloadCSV(allSamples);
-  };
-
+      downloadCSV(allSamples);
+    }
+  ,[]);
   const handleToggleYAxis = () => {
     setYAxis(prev => {
       if(prev == EAggregationMethod.Mean){
