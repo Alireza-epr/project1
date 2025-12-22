@@ -35,7 +35,9 @@ export interface INDVISample {
   preview: string;
   ndviArray: Float32Array<ArrayBuffer> | null;
   meanNDVI: number | null;
+  meanNDVISmoothed: number | null;
   medianNDVI: number | null;
+  medianNDVISmoothed: number | null;
   n_valid: number;
   valid_fraction: TPercentage | "N/A";
   filter: ESampleFilter;
@@ -59,7 +61,7 @@ export interface IMapStoreStates {
   showError: boolean;
   fetchFeatures: EMarkerType | null;
   globalLoading: boolean;
-  smoothing: boolean;
+  smoothingWindow: string;
   samples: INDVISample[];
   notValidSamples: INDVISample[];
   responseFeatures: IStacSearchResponse | null;
@@ -97,7 +99,7 @@ export interface IMapStoreActions {
       | ((prev: EMarkerType | null) => EMarkerType | null),
   ) => void;
   setGlobalLoading: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
-  setSmoothing: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
+  setSmoothingWindow: (a_Value: string | ((prev: string) => string)) => void;
   setSamples: (
     a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
   ) => void;
@@ -185,7 +187,7 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       samples: [] as INDVISample[],
       sampleFilter: ESampleFilter.none,
       notValidSamples: [] as INDVISample[],
-      smoothing: false,
+      smoothingWindow: "1",
       yAxis: EAggregationMethod.Mean,
     },
     (set) => ({
@@ -338,10 +340,10 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
               : a_Value,
         })),
 
-      setSmoothing: (a_Value) =>
+      setSmoothingWindow: (a_Value) =>
         set((state) => ({
-          smoothing:
-            typeof a_Value === "function" ? a_Value(state.smoothing) : a_Value,
+          smoothingWindow:
+            typeof a_Value === "function" ? a_Value(state.smoothingWindow) : a_Value,
         })),
 
       setResponseFeatures: (a_Value) =>

@@ -13,6 +13,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  Label,
 } from "recharts";
 import {
   ESTACCollections,
@@ -83,7 +84,7 @@ const Map = () => {
   const nextPage = useMapStore((state) => state.nextPage);
   const previousPage = useMapStore((state) => state.previousPage);
   const sampleFilter = useMapStore((state) => state.sampleFilter);
-  const smoothing = useMapStore((state) => state.smoothing);
+  const smoothingWindow = useMapStore((state) => state.smoothingWindow);
   const yAxis = useMapStore((state) => state.yAxis);
 
   const setNextPage = useMapStore((state) => state.setNextPage);
@@ -110,7 +111,6 @@ const Map = () => {
     (state) => state.setCoverageThreshold,
   );
   const setSampleFilter = useMapStore((state) => state.setSampleFilter);
-  const setSmoothing = useMapStore((state) => state.setSmoothing);
   const setRadius = useMapStore((state) => state.setRadius);
 
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -539,6 +539,13 @@ const Map = () => {
     [map],
   );
 
+  const getYAxisLabel = () => {
+    let smoothingStatus = smoothingWindow !== "1" ? `smoothed window ${smoothingWindow}` : "raw"
+    let yAxisStatus = yAxis == EAggregationMethod.Mean ? "Mean" : "Median"
+    const full = yAxisStatus + " - " + smoothingStatus
+    return full
+  }
+
   // Loading Map
   useEffect(() => {
     if (map || !mapContainer.current) return;
@@ -825,16 +832,6 @@ const Map = () => {
       }
     }
 
-    // Smoothing
-    const smoothingParam = params.get(EURLParams.smoothing);
-    if (smoothingParam) {
-      if (isValidBoolean(smoothingParam)) {
-        const isTrue = smoothingParam == "true";
-        setSmoothing(isTrue);
-      } else {
-        console.warn("Failed to use URLParam: smoothing does not match");
-      }
-    }
   }, [map]);
 
   // Write URLParams
@@ -878,8 +875,7 @@ const Map = () => {
     params.set(EURLParams.limit, limit);
     params.set(EURLParams.coverage, coverageThreshold);
     params.set(EURLParams.filter, sampleFilter);
-    params.set(EURLParams.smoothing, smoothing ? "true" : "false");
-
+    
     window.history.replaceState(null, "", `?${params.toString()}`);
   }, [
     map,
@@ -894,7 +890,6 @@ const Map = () => {
     limit,
     coverageThreshold,
     sampleFilter,
-    smoothing,
   ]);
 
   // Get NDVI for STAC Items
@@ -1065,10 +1060,29 @@ const Map = () => {
                 }
               />
               {/* Y automatically scale to fit the data */}
-              <YAxis stroke="white" domain={[-1, 1]} />
+              <YAxis stroke="white" domain={[-1, 1]}>
+                <Label
+                  style={{
+                      textAnchor: "middle",
+                      fontSize: "1.1rem",
+                      fill: "white",
+                  }}
+                  angle={270} 
+                  value={getYAxisLabel()} />
+              </YAxis>
               {/* popup tooltip by hovering */}
               <Tooltip content={CustomTooltip} />
-              <Line type="linear" dataKey={yAxis == EAggregationMethod.Mean ? "meanNDVI" : "medianNDVI"} stroke="#2ecc71" />
+              <Line 
+                type="linear"
+                dataKey={
+                  yAxis == EAggregationMethod.Mean 
+                  ? smoothingWindow !== "1"
+                    ? "meanNDVISmoothed" 
+                    : "meanNDVI" 
+                  : smoothingWindow !== "1"
+                    ? "medianNDVISmoothed" 
+                    : "medianNDVI"
+                } stroke="#2ecc71" />
             </LineChart>
           </ResponsiveContainer>
         </Chart>

@@ -231,7 +231,9 @@ export const getNDVISample = (
     ndviArray: ndviArray,
 
     meanNDVI: meanNDVI,
+    meanNDVISmoothed: meanNDVI,
     medianNDVI: medianNDVI,
+    medianNDVISmoothed: medianNDVI,
 
     n_valid: validPixels,
     valid_fraction: `${validPixelsPercentage.toFixed(2)}%`,
@@ -475,8 +477,8 @@ export const getSmoothNDVISamples = (
 
     return {
       ...sample,
-      meanNDVI: meanValues.length ? avg(meanValues) : sample.meanNDVI,
-      medianNDVI: medianValues.length ? avg(medianValues) : sample.medianNDVI,
+      meanNDVISmoothed: meanValues.length ? avg(meanValues) : sample.meanNDVI,
+      medianNDVISmoothed: medianValues.length ? avg(medianValues) : sample.medianNDVI,
     };
   });
 };

@@ -56,9 +56,6 @@ const Sidebar = () => {
   const sampleFilter = useMapStore((state) => state.sampleFilter);
   const setSampleFilter = useMapStore((state) => state.setSampleFilter);
 
-  const smoothing = useMapStore((state) => state.smoothing);
-  const setSmoothing = useMapStore((state) => state.setSmoothing);
-
   const handlePointClick = () => {
     setMarker((prev) => {
       if (prev.point) {
@@ -161,9 +158,7 @@ const Sidebar = () => {
     setSampleFilter(a_Type);
   };
 
-  const handleChangeSmoothing = (a_State: boolean) => {
-    setSmoothing(a_State);
-  };
+
 
   const [isSidebarDisabled, setIsSidebarDisabled] = useState(false);
 
@@ -335,22 +330,7 @@ const Sidebar = () => {
               />
             </div>
           </Section>
-          <Section title="Smoothing" disabled={isSidebarDisabled}>
-            <div className={` ${sidebarStyles.buttonRowWrapper}`}>
-              <CButton
-                title={"Yes"}
-                onButtonClick={() => handleChangeSmoothing(true)}
-                active={smoothing}
-                disable={isSidebarDisabled}
-              />
-              <CButton
-                title={"No"}
-                onButtonClick={() => handleChangeSmoothing(false)}
-                active={!smoothing}
-                disable={isSidebarDisabled}
-              />
-            </div>
-          </Section>
+          
         </Section>
 
         <Section title="ROI" disabled={isSidebarDisabled}>

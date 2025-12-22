@@ -14,6 +14,7 @@ import { IChartSummaryRow } from "./ChartSummaryRow";
 import { downloadCSV, toFirstLetterUppercase } from "../utils/generalUtils";
 import { getSmoothNDVISamples } from "../utils/calculationUtils";
 import { EAggregationMethod } from "../types/generalTypes";
+import ChartHeaderItemOptions from "./ChartHeaderItemOptions";
 
 export interface IChartProps {
   children: React.ReactNode;
@@ -32,8 +33,8 @@ const Chart = (props: IChartProps) => {
   const globalLoading = useMapStore((state) => state.globalLoading);
   const setFetchFeatures = useMapStore((state) => state.setFetchFeatures);
 
-  const smoothing = useMapStore((state) => state.smoothing);
-  const setSmoothing = useMapStore((state) => state.setSmoothing);
+  const smoothingWindow = useMapStore((state) => state.smoothingWindow);
+  const setSmoothingWindow = useMapStore((state) => state.setSmoothingWindow);
 
   const yAxis = useMapStore((state) => state.yAxis);
   const setYAxis = useMapStore((state) => state.setYAxis);
@@ -48,6 +49,7 @@ const Chart = (props: IChartProps) => {
   const [showList, setShowList] = useState(false);
   const [showToggleChart, setShowToggleChart] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showSmoothingOptions, showShowSmoothingOptions] = useState(false);
   const [summaryItems, setSummaryItems] = useState<IChartSummaryRow[]>([
     { id: 1, title: "Total / Used Scenes", value: "-" },
     { id: 2, title: "Average Valid Pixels", value: "-" },
@@ -58,7 +60,6 @@ const Chart = (props: IChartProps) => {
   const [showSmoothChart, setShowSmoothChart] = useState(false);
   //const [smoothed, setSmoothed] = useState(false);
 
-  let notSmoothedSamples = useRef<INDVISample[]>([]);
 
   useEffect(() => {
     if (samples.length !== 0) {
@@ -82,7 +83,6 @@ const Chart = (props: IChartProps) => {
       setMinNDVI(min);
       setMeanNDVI(count > 0 ? sum / count : 0);
 
-      notSmoothedSamples.current = samples;
     } else {
       setMaxNDVI(0);
       setMeanNDVI(0);
@@ -109,6 +109,10 @@ const Chart = (props: IChartProps) => {
       setShowSmoothChart(false);
     }
   }, [globalLoading]);
+
+  useEffect(()=>{
+    setSamples(prev=>getSmoothNDVISamples(prev, Number(smoothingWindow)))
+  },[smoothingWindow])
 
   const getValidity = () => {
     return props.items ? `${samples.length}/${props.items}` : "-";
@@ -170,29 +174,22 @@ const Chart = (props: IChartProps) => {
     ]);
   };
 
-  const handleSmoothChart = () => {
-    setSmoothing(!smoothing);
-  };
+  const handleToggleSmoothingOptions = () => {
+    showShowSmoothingOptions(!showSmoothingOptions)
+  }
+
+  const handleSmoothingWindow = (a_Window: string) => {
+    setSmoothingWindow(a_Window)
+  }
 
   const handleExportCSV = (a_Samples: INDVISample[]) => {
     const validSamples = a_Samples.filter((s) => s.meanNDVI);
     const notValidSamples = a_Samples.filter((s) => !s.meanNDVI);
-    const smoothedSamples = getSmoothNDVISamples(validSamples);
     const allSamples = [...validSamples, ...notValidSamples].sort(
       (a, b) => a.id - b.id,
     );
-    const exportCSV: (INDVISample & INDVISmoothed)[] = allSamples.map((s) => {
-      const smoothedSample = smoothedSamples.find(
-        (smoothed) => smoothed.id === s.id,
-      );
-      return {
-        ...s,
-        meanNDVISmoothed: smoothedSample ? smoothedSample.meanNDVI : null,
-        medianNDVISmoothed: smoothedSample ? smoothedSample.medianNDVI : null,
-      };
-    });
 
-    downloadCSV(exportCSV);
+    downloadCSV(allSamples);
   };
 
   const handleToggleYAxis = () => {
@@ -205,27 +202,12 @@ const Chart = (props: IChartProps) => {
     })
   }
 
-  useEffect(() => {
-    if (smoothing) {
-      const smoothedNDVISamples = getSmoothNDVISamples(samples);
-      setSamples(smoothedNDVISamples);
-    } else {
-      setSamples(notSmoothedSamples.current);
-    }
-  }, [smoothing]);
-
-  const getTitleInfo = () => {
-    let smoothingStatus = smoothing ? "smoothed" : "raw"
-    let yAxisStatus = yAxis == EAggregationMethod.Mean ? "Mean" : "Median"
-    const full = "( " + yAxisStatus + " - " + smoothingStatus + " )"
-    return full
-  }
 
   return (
     <div className={` ${chartStyles.wrapper}`}>
       <div className={` ${chartStyles.buttonsWrapper}`}>
         <div className={` ${chartStyles.title}`}>
-          {`Chart of ${fetchFeatures == EMarkerType.point ? toFirstLetterUppercase(fetchFeatures) : "Zonal"} ${getTitleInfo()}`}
+          {`Chart of ${fetchFeatures == EMarkerType.point ? toFirstLetterUppercase(fetchFeatures) : "Zonal"}`}
         </div>
         <ChartHeaderItem
           title="Series Summary"
@@ -243,7 +225,7 @@ const Chart = (props: IChartProps) => {
           disabled={[...samples, ...notValidSamples].length == 0}
         />
         <ChartHeaderItem
-          title={yAxis}
+          title={"Switch Y Axis"}
           alt="Aggregation"
           onClick={handleToggleYAxis}
           icon="y-axis"
@@ -252,11 +234,20 @@ const Chart = (props: IChartProps) => {
         <ChartHeaderItem
           title="Smooth Chart"
           alt="Smooth Chart"
-          onClick={handleSmoothChart}
+          onClick={handleToggleSmoothingOptions}
           icon="smoothing"
           disabled={!showSmoothChart}
-          active={smoothing}
-        />
+          active={showSmoothingOptions}
+        >
+          { showSmoothingOptions
+            ? <ChartHeaderItemOptions 
+                active={smoothingWindow}
+                options={["1", "3", "5", "7", "9"]} 
+                onOption={(window)=>handleSmoothingWindow(window)} 
+              />
+            : <></>
+          }
+        </ChartHeaderItem>
         <ChartHeaderItem
           title="Toggle Chart"
           alt="Toggle Chart"
