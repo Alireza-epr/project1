@@ -3,15 +3,22 @@ import { ReactNode, useCallback } from "react"
 import chartHeaderItemOptionsStyle from "./ChartHeaderItemOptions.module.scss"
 import Section from "./Section"
 import RangeInput from "./RangeInput"
-import { IChartHeaderItemOption } from "src/types/generalTypes"
+import { IChartHeaderItemOption } from "../types/generalTypes"
+import { useMapStore } from "../store/mapStore"
 
 export interface ChartHeaderItemOptionsProps {
-    //active: string,
+    activeItem?: number,
+    isList?: boolean, 
     options: IChartHeaderItemOption[],
     onOption: (a_Valud: IChartHeaderItemOption) => void
 }
 
 const ChartHeaderItemOptions = (props: ChartHeaderItemOptionsProps) => {
+
+    const comparisonItem = useMapStore((state) => state.comparisonItem);
+    const onSelectOption = useCallback((a_Option: IChartHeaderItemOption)=>{
+        props.onOption(a_Option)
+    },[])
 
     const onChangeOption = useCallback((a_Value: string, a_Option: IChartHeaderItemOption)=>{
         props.onOption({
@@ -22,7 +29,19 @@ const ChartHeaderItemOptions = (props: ChartHeaderItemOptionsProps) => {
 
     return (
         <div className={` ${chartHeaderItemOptionsStyle.wrapper}`} onClick={(e) => e.stopPropagation()}>
-            {props.options.map((option, index )=>
+            {
+            props.isList 
+            ?
+              props.options.map((option, index )=>
+                <Section
+                    title={option.title}
+                    key={index}
+                    onSection={()=>onSelectOption(option)}
+                    active={comparisonItem?.id == option.id }
+                >
+                </Section>
+              )  
+            : props.options.map((option, index )=>
                 <Section
                     title={option.title+ " - " + option.value}
                     key={index}
@@ -36,7 +55,8 @@ const ChartHeaderItemOptions = (props: ChartHeaderItemOptionsProps) => {
                     >
                     </RangeInput>
                 </Section>
-            )}
+            )
+            }
         </div>
     )
 }

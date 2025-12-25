@@ -1,7 +1,7 @@
 import { spatialItems } from "../types/apiTypes";
 import { EMarkerType, INDVISample } from "../store/mapStore";
 import { getLocaleISOString } from "./dateUtils";
-import { IChangePoint } from "src/types/generalTypes";
+import { IChangePoint } from "../types/generalTypes";
 
 export const toFirstLetterUppercase = (a_String: string | null) => {
   if (!a_String) return;

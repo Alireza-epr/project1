@@ -1,4 +1,4 @@
-import { EAggregationMethod, EPastTime, ESampleFilter, IChangePoint, IChartHeaderItemOption } from "../types/generalTypes";
+import { EAggregationMethod, EPastTime, ESampleFilter, IChangePoint, IChartHeaderItemOption, IComparisonItem } from "../types/generalTypes";
 import { getLocaleISOString } from "../utils/dateUtils";
 import { Map, Marker, Subscription } from "maplibre-gl";
 import { create } from "zustand";
@@ -68,6 +68,8 @@ export interface IMapStoreStates {
   globalLoading: boolean;
   smoothingWindow: IChartHeaderItemOption[];
   changeDetection: IChartHeaderItemOption[];
+  comparisonOptions: IChartHeaderItemOption[];
+  comparisonItem: IComparisonItem | null;
   changePoints: IChangePoint[];
   samples: INDVISample[];
   notValidSamples: INDVISample[];
@@ -158,6 +160,16 @@ export interface IMapStoreActions {
       | (IChartHeaderItemOption[])
       | ((prev: IChartHeaderItemOption[]) => IChartHeaderItemOption[]),
   ) => void;
+  setComparisonOptions: (
+    a_Value:
+      | (IChartHeaderItemOption[])
+      | ((prev: IChartHeaderItemOption[]) => IChartHeaderItemOption[]),
+  ) => void;
+  setComparisonItem: (
+    a_Value:
+      | (IComparisonItem | null)
+      | ((prev: IComparisonItem | null) => IComparisonItem | null),
+  ) => void;
   setChangePoints: (
     a_Value:
       | (IChangePoint[])
@@ -246,7 +258,9 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
           step: 1,
         }
       ] as IChartHeaderItemOption[],
-      changePoints: [] as IChangePoint[]
+      changePoints: [] as IChangePoint[],
+      comparisonOptions: [] as IChartHeaderItemOption[],
+      comparisonItem: null as IComparisonItem | null,
     },
     (set) => ({
       // Actions
@@ -462,6 +476,18 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
         set((state) => ({
           changePoints:
             typeof a_Value === "function" ? a_Value(state.changePoints) : a_Value,
+        })),
+
+      setComparisonOptions: (a_Value) =>
+        set((state) => ({
+          comparisonOptions:
+            typeof a_Value === "function" ? a_Value(state.comparisonOptions) : a_Value,
+        })),
+      
+      setComparisonItem: (a_Value) =>
+        set((state) => ({
+          comparisonItem:
+            typeof a_Value === "function" ? a_Value(state.comparisonItem) : a_Value,
         })),
 
       setPolygons: (a_Value) =>

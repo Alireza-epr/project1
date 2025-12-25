@@ -1,3 +1,4 @@
+import { EMarkerType} from "../store/mapStore";
 import { IFeature } from "./geoJSON";
 
 export enum EPastTime {
@@ -79,7 +80,18 @@ export interface IChartHeaderItemOption {
   title: string,
   id: number,
   value: string,
-  min: number, 
-  max: number,
-  step: number
+  min?: number, 
+  max?: number,
+  step?: number
+}
+
+export enum EChartHeaderOptions {
+  smoothing= "smoothing",
+  detection= "detection",
+  comparison= "comparison"
+}
+
+export interface IComparisonItem {
+  type: EMarkerType,
+  id: number
 }
