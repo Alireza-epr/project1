@@ -45,6 +45,7 @@ import {
   ELoadingSize,
   ESampleFilter,
   EURLParams,
+  IComparisonItem,
   ILayerMetadata,
   INDVIPanel,
   Units,
@@ -101,7 +102,9 @@ const Map = () => {
   const smoothingWindow = useMapStore((state) => state.smoothingWindow);
   const yAxis = useMapStore((state) => state.yAxis);
   const polygons = useMapStore((state) => state.polygons);
+  const comparisonItem = useMapStore((state) => state.comparisonItem);
 
+  const setComparisonItem = useMapStore((state) => state.setComparisonItem);
   const setPolygons = useMapStore((state) => state.setPolygons);
   const setNextPage = useMapStore((state) => state.setNextPage);
   const setPreviousPage = useMapStore((state) => state.setPreviousPage);
@@ -453,7 +456,35 @@ const Map = () => {
     }
   }, [map]);
 
-  const getPostBody = useCallback(() => {
+  const getCoordinatesFromComparisonItem = useCallback((a_ComparisonItem: IComparisonItem): [number, number][]=>{
+    if(a_ComparisonItem.type === EMarkerType.polygon){
+      const polygonLayer = polygonsRef.current.at(a_ComparisonItem.id-1);
+      if (!polygonLayer) return [];
+      let coordinates: [number, number][] = polygonLayer.markers
+        .filter((m) => m.type === EMarkerType.polygon)
+        .map((m) => {
+          const lng = m.marker.getLngLat().lng;
+          const lat = m.marker.getLngLat().lat;
+          return [lng, lat];
+        });
+
+      // Close the polygon
+      if (coordinates.length > 0) {
+        coordinates.push(coordinates[0]);
+      }
+
+      return coordinates;
+    } else {
+      const circleLayer = map!.getLayer("circle");
+      if (!circleLayer) return [];
+
+      const metadata = circleLayer.metadata as ILayerMetadata;
+      const feature = metadata?.feature;
+      return feature?.geometry?.coordinates?.[0] || [];
+    }
+  },[map])
+
+  const getPostBody = useCallback((a_ComparisonItem?: IComparisonItem) => {
     const cloudCoverFilter: TCloudCoverFilter = {
       op: "<=",
       args: [{ property: "eo:cloud_cover" }, Number(cloudCover)],
@@ -470,7 +501,7 @@ const Map = () => {
         { property: "geometry" },
         {
           type: "Polygon",
-          coordinates: [getCoordinatesFromMarkers()],
+          coordinates: [!a_ComparisonItem ? getCoordinatesFromMarkers(): getCoordinatesFromComparisonItem(a_ComparisonItem)],
         },
       ],
     };
@@ -553,6 +584,7 @@ const Map = () => {
   ]);
 
   const handleCloseChart = useCallback(() => {
+    setComparisonItem(null)
     setFetchFeatures(null);
     showMap();
   }, [setFetchFeatures, showMap]);
@@ -1110,6 +1142,16 @@ const Map = () => {
       }
     }
   }, [globalLoading]);
+
+  // 5. Comparison Mode
+  useEffect(()=>{
+    if(comparisonItem){
+      const comparisonPostBody = getPostBody(comparisonItem)
+      console.log("Request Body (Comparison)")
+      console.log(comparisonPostBody)
+    }
+  },[comparisonItem])
+
 
   return (
     <div className={` ${mapStyle.wrapper}`}>
