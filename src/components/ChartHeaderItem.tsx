@@ -8,7 +8,7 @@ export interface IChartHeaderItemProps {
   onClick: () => void;
   active?: boolean;
   disabled?: boolean;
-  isClose?: boolean
+  isClose?: boolean;
 }
 
 const ChartHeaderItem = (props: IChartHeaderItemProps) => {
@@ -23,7 +23,7 @@ const ChartHeaderItem = (props: IChartHeaderItemProps) => {
             ? "rgb(28, 215, 206)"
             : "",
         color: props.disabled ? "darkgray" : "",
-        marginLeft: props.isClose ? "5%" : ""
+        marginLeft: props.isClose ? "5%" : "",
       }}
       onClick={() => !props.disabled && props.onClick()}
     >

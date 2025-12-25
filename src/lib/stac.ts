@@ -116,11 +116,10 @@ export const useNDVI = () => {
           const cachedNDVI = cache.getCache(cacheKey) as INDVISample;
           const updatedId: INDVISample = {
             ...cachedNDVI,
-            id: countId
-          }
+            id: countId,
+          };
           console.log(updatedId);
           if (cachedNDVI.meanNDVI) {
-
             setSamples((prev) => [...prev, updatedId]);
           } else {
             setNotValidSamples((prev) => [...prev, updatedId]);
@@ -195,7 +194,7 @@ export const useNDVI = () => {
           console.error("Unexpected error getNDVI: "+error)
           continue
         } */
-        
+
         const ndviSampleNotValid: INDVISample = {
           featureId: feature.id,
           id: countId,

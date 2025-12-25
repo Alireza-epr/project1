@@ -12,8 +12,15 @@ import ChartListRows from "./ChartListRows";
 import ChartSummaryRows from "./ChartSummaryRows";
 import { IChartSummaryRow } from "./ChartSummaryRow";
 import { downloadCSV, toFirstLetterUppercase } from "../utils/generalUtils";
-import { detectChangePointsZScore, getSmoothNDVISamples } from "../utils/calculationUtils";
-import { EAggregationMethod, EChartHeaderOptions, IChartHeaderItemOption } from "../types/generalTypes";
+import {
+  detectChangePointsZScore,
+  getSmoothNDVISamples,
+} from "../utils/calculationUtils";
+import {
+  EAggregationMethod,
+  EChartHeaderOptions,
+  IChartHeaderItemOption,
+} from "../types/generalTypes";
 import ChartHeaderItemOptions from "./ChartHeaderItemOptions";
 
 export interface IChartProps {
@@ -40,8 +47,9 @@ const Chart = (props: IChartProps) => {
   const setChangeDetection = useMapStore((state) => state.setChangeDetection);
 
   const comparisonOptions = useMapStore((state) => state.comparisonOptions);
-  const setComparisonOptions = useMapStore((state) => state.setComparisonOptions);
-
+  const setComparisonOptions = useMapStore(
+    (state) => state.setComparisonOptions,
+  );
 
   const setComparisonItem = useMapStore((state) => state.setComparisonItem);
 
@@ -76,7 +84,6 @@ const Chart = (props: IChartProps) => {
   const [enableHeaderOption, setEnableHeaderOption] = useState(false);
   //const [smoothed, setSmoothed] = useState(false);
 
-
   useEffect(() => {
     if (samples.length !== 0) {
       let max = -Infinity;
@@ -98,7 +105,6 @@ const Chart = (props: IChartProps) => {
       setMaxNDVI(max);
       setMinNDVI(min);
       setMeanNDVI(count > 0 ? sum / count : 0);
-
     } else {
       setMaxNDVI(0);
       setMeanNDVI(0);
@@ -107,7 +113,7 @@ const Chart = (props: IChartProps) => {
   }, [samples]);
 
   useEffect(() => {
-    const hasPolygon = polygons.length > 0 
+    const hasPolygon = polygons.length > 0;
     const hasPoint =
       markers.filter((m) => m.type === EMarkerType.point).length === 1;
     if (hasPolygon && hasPoint) {
@@ -115,21 +121,23 @@ const Chart = (props: IChartProps) => {
     } else {
       setShowToggleChart(false);
     }
-    const chartHeaderOption: IChartHeaderItemOption[] = polygons.slice(0, -1).map( polygon => {
-      return {
-        id: polygon.id,
-        title: `Polygon ${polygon.id}`,
-        value: `Polygon ${polygon.id}`,
-      }
-    })
-    if(hasPoint){
+    const chartHeaderOption: IChartHeaderItemOption[] = polygons
+      .slice(0, -1)
+      .map((polygon) => {
+        return {
+          id: polygon.id,
+          title: `Polygon ${polygon.id}`,
+          value: `Polygon ${polygon.id}`,
+        };
+      });
+    if (hasPoint) {
       chartHeaderOption.push({
-        id: chartHeaderOption.length+1,
+        id: chartHeaderOption.length + 1,
         title: "Point",
-        value: "Point"
-      })
+        value: "Point",
+      });
     }
-    setComparisonOptions(chartHeaderOption)
+    setComparisonOptions(chartHeaderOption);
   }, []);
 
   useEffect(() => {
@@ -140,19 +148,21 @@ const Chart = (props: IChartProps) => {
     }
   }, [globalLoading]);
 
-  useEffect(()=>{
-    setSamples(prev=>getSmoothNDVISamples(prev, Number(smoothingWindow[0].value)))
-  },[smoothingWindow])
+  useEffect(() => {
+    setSamples((prev) =>
+      getSmoothNDVISamples(prev, Number(smoothingWindow[0].value)),
+    );
+  }, [smoothingWindow]);
 
-  useEffect(()=>{
+  useEffect(() => {
     const points = detectChangePointsZScore(
       samples,
-      +changeDetection.find( o => o.id == 1 )!.value,
-      +changeDetection.find( o => o.id == 2 )!.value,
-      +changeDetection.find( o => o.id == 3 )!.value,
-    )
-    setChangePoints(points)
-  },[changeDetection])
+      +changeDetection.find((o) => o.id == 1)!.value,
+      +changeDetection.find((o) => o.id == 2)!.value,
+      +changeDetection.find((o) => o.id == 3)!.value,
+    );
+    setChangePoints(points);
+  }, [changeDetection]);
 
   const getValidity = () => {
     return props.items ? `${samples.length}/${props.items}` : "-";
@@ -188,15 +198,17 @@ const Chart = (props: IChartProps) => {
         .filter((s) => s.meanNDVI)
         .map((s) => s.valid_fraction)
         .reduce((a, b) => a + b, 0);
-      const averageValidPixels = validsLen !== 0 ? (sumValidPixels / validsLen).toFixed(2) : "-" ;
+      const averageValidPixels =
+        validsLen !== 0 ? (sumValidPixels / validsLen).toFixed(2) : "-";
 
       // First / Last Date
       const sortedValids = a_AllSamples
         .filter((s) => s.meanNDVI)
         .sort((a, b) => a.id - b.id);
 
-      const firstDate = validsLen !== 0 ? sortedValids[0].datetime : "-" ;
-      const lastDate = validsLen !== 0 ? sortedValids[validsLen - 1].datetime : "-" ;
+      const firstDate = validsLen !== 0 ? sortedValids[0].datetime : "-";
+      const lastDate =
+        validsLen !== 0 ? sortedValids[validsLen - 1].datetime : "-";
 
       setSummaryItems([
         { id: 1, title: "Used / Total Scenes", value: totalUsed },
@@ -205,57 +217,59 @@ const Chart = (props: IChartProps) => {
         { id: 4, title: "Last Date", value: lastDate },
         { id: 5, title: "Latency", value: getLatency() },
       ]);
-    }
-  ,[showSummary, props.latency]);
+    },
+    [showSummary, props.latency],
+  );
 
   const disappearOptionsExcept = (a_Option: EChartHeaderOptions) => {
-    switch(a_Option) {
-      case EChartHeaderOptions.smoothing: 
-        setShowDetectionOptions(false)
-        setShowComparisonOptions(false)
+    switch (a_Option) {
+      case EChartHeaderOptions.smoothing:
+        setShowDetectionOptions(false);
+        setShowComparisonOptions(false);
         break;
-      case EChartHeaderOptions.detection: 
-        setShowSmoothingOptions(false)
-        setShowComparisonOptions(false)
+      case EChartHeaderOptions.detection:
+        setShowSmoothingOptions(false);
+        setShowComparisonOptions(false);
         break;
-      case EChartHeaderOptions.comparison: 
-        setShowSmoothingOptions(false)
-        setShowDetectionOptions(false)
+      case EChartHeaderOptions.comparison:
+        setShowSmoothingOptions(false);
+        setShowDetectionOptions(false);
         break;
     }
-  }
+  };
 
   const handleToggleSmoothingOptions = () => {
-    disappearOptionsExcept(EChartHeaderOptions.smoothing)
-    setShowSmoothingOptions(!showSmoothingOptions)
-  }
+    disappearOptionsExcept(EChartHeaderOptions.smoothing);
+    setShowSmoothingOptions(!showSmoothingOptions);
+  };
 
   const handleToggleDetectionOptions = () => {
-    disappearOptionsExcept(EChartHeaderOptions.detection)
-    setShowDetectionOptions(!showDetectionOptions)
-  }
+    disappearOptionsExcept(EChartHeaderOptions.detection);
+    setShowDetectionOptions(!showDetectionOptions);
+  };
 
   const handleToggleComparisonOptions = () => {
-    disappearOptionsExcept(EChartHeaderOptions.comparison)
-    setShowComparisonOptions(!showComparisonOptions)
-  }
+    disappearOptionsExcept(EChartHeaderOptions.comparison);
+    setShowComparisonOptions(!showComparisonOptions);
+  };
 
   const handleSmoothingWindow = (a_Window: IChartHeaderItemOption) => {
-    setSmoothingWindow([a_Window])
-  }
+    setSmoothingWindow([a_Window]);
+  };
 
   const handleChangeDetection = (a_Option: IChartHeaderItemOption) => {
-    setChangeDetection(prev =>
-      prev.map(o => (o.id === a_Option.id ? a_Option : o))
-    )
-  }
+    setChangeDetection((prev) =>
+      prev.map((o) => (o.id === a_Option.id ? a_Option : o)),
+    );
+  };
 
   const handleChangeComparison = (a_Option: IChartHeaderItemOption) => {
     setComparisonItem({
       id: a_Option.id,
-      type: a_Option.title === "Point" ? EMarkerType.point : EMarkerType.polygon,
-    })
-  }
+      type:
+        a_Option.title === "Point" ? EMarkerType.point : EMarkerType.polygon,
+    });
+  };
 
   const handleExportCSV = useCallback(
     (a_Samples: INDVISample[]) => {
@@ -266,36 +280,36 @@ const Chart = (props: IChartProps) => {
       );
 
       downloadCSV(allSamples, changePoints);
-    }
-  ,[changePoints]);
+    },
+    [changePoints],
+  );
   const handleToggleYAxis = () => {
-    setYAxis(prev => {
-      if(prev == EAggregationMethod.Mean){
-        return EAggregationMethod.Median
+    setYAxis((prev) => {
+      if (prev == EAggregationMethod.Mean) {
+        return EAggregationMethod.Median;
       } else {
-        return EAggregationMethod.Mean
+        return EAggregationMethod.Mean;
       }
-    })
-  }
+    });
+  };
 
   const handlePrevious = () => {
-    if(!globalLoading && props.onPrevious){
-      props.onPrevious()
+    if (!globalLoading && props.onPrevious) {
+      props.onPrevious();
     }
-  }
+  };
 
   const handleNext = () => {
-    if(!globalLoading && props.onNext){
-      props.onNext()
+    if (!globalLoading && props.onNext) {
+      props.onNext();
     }
-  }
-
+  };
 
   return (
     <div className={` ${chartStyles.wrapper}`}>
       <div className={` ${chartStyles.buttonsWrapper}`}>
         <div className={` ${chartStyles.title}`}>
-          {`Chart of ${fetchFeatures == EMarkerType.point ? toFirstLetterUppercase(fetchFeatures) : "Zonal Nr."+polygons.at(-1)?.id}`}
+          {`Chart of ${fetchFeatures == EMarkerType.point ? toFirstLetterUppercase(fetchFeatures) : "Zonal Nr." + polygons.at(-1)?.id}`}
         </div>
         <ChartHeaderItem
           title={"Comparison "}
@@ -305,15 +319,16 @@ const Chart = (props: IChartProps) => {
           disabled={!enableHeaderOption && comparisonOptions.length > 0}
           active={showComparisonOptions}
         >
-          { showComparisonOptions
-            ? <ChartHeaderItemOptions 
-                options={comparisonOptions} 
-                onOption={handleChangeComparison} 
-                isList={true}
-              />
-            : <></>
-          }
-        </ ChartHeaderItem>
+          {showComparisonOptions ? (
+            <ChartHeaderItemOptions
+              options={comparisonOptions}
+              onOption={handleChangeComparison}
+              isList={true}
+            />
+          ) : (
+            <></>
+          )}
+        </ChartHeaderItem>
         <ChartHeaderItem
           title="Series Summary"
           alt="Series Summary"
@@ -337,14 +352,15 @@ const Chart = (props: IChartProps) => {
           disabled={!enableHeaderOption}
           active={showDetectionOptions}
         >
-          { showDetectionOptions
-            ? <ChartHeaderItemOptions 
-                options={changeDetection} 
-                onOption={handleChangeDetection} 
-              />
-            : <></>
-          }
-        </ ChartHeaderItem>
+          {showDetectionOptions ? (
+            <ChartHeaderItemOptions
+              options={changeDetection}
+              onOption={handleChangeDetection}
+            />
+          ) : (
+            <></>
+          )}
+        </ChartHeaderItem>
         <ChartHeaderItem
           title={"Switch Y Axis"}
           alt="Aggregation"
@@ -360,13 +376,14 @@ const Chart = (props: IChartProps) => {
           disabled={!enableHeaderOption}
           active={showSmoothingOptions}
         >
-          { showSmoothingOptions
-            ? <ChartHeaderItemOptions 
-                options={smoothingWindow} 
-                onOption={handleSmoothingWindow} 
-              />
-            : <></>
-          }
+          {showSmoothingOptions ? (
+            <ChartHeaderItemOptions
+              options={smoothingWindow}
+              onOption={handleSmoothingWindow}
+            />
+          ) : (
+            <></>
+          )}
         </ChartHeaderItem>
         <ChartHeaderItem
           title="Toggle Chart"
@@ -411,7 +428,7 @@ const Chart = (props: IChartProps) => {
             className={`${chartStyles.arrow} ${chartStyles.previous}`}
             onClick={handlePrevious}
             style={{
-              backgroundColor: globalLoading ? "grey" : ""
+              backgroundColor: globalLoading ? "grey" : "",
             }}
           >
             <img
@@ -427,7 +444,7 @@ const Chart = (props: IChartProps) => {
             className={`${chartStyles.arrow} ${chartStyles.next}`}
             onClick={handleNext}
             style={{
-              backgroundColor: globalLoading ? "grey" : ""
+              backgroundColor: globalLoading ? "grey" : "",
             }}
           >
             <img

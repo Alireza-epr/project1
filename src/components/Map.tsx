@@ -3,7 +3,15 @@ import { useRef, useEffect, useCallback, use, useState } from "react";
 import maplibregl from "maplibre-gl";
 import { Map as MapLibre } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { EMarkerType, IMarker, INDVISample, IPolygon, TMarker, TPercentage, useMapStore } from "../store/mapStore";
+import {
+  EMarkerType,
+  IMarker,
+  INDVISample,
+  IPolygon,
+  TMarker,
+  TPercentage,
+  useMapStore,
+} from "../store/mapStore";
 import type { Feature, Polygon } from "geojson";
 import { useFilterSTAC, useNDVI, useTokenCollection } from "../lib/stac";
 import {
@@ -93,7 +101,7 @@ const Map = () => {
   const smoothingWindow = useMapStore((state) => state.smoothingWindow);
   const yAxis = useMapStore((state) => state.yAxis);
   const polygons = useMapStore((state) => state.polygons);
-  
+
   const setPolygons = useMapStore((state) => state.setPolygons);
   const setNextPage = useMapStore((state) => state.setNextPage);
   const setPreviousPage = useMapStore((state) => state.setPreviousPage);
@@ -253,17 +261,21 @@ const Map = () => {
 
   const addPolygonMarker = useCallback(
     (a_Event: maplibregl.MapMouseEvent) => {
-      if(a_Event.originalEvent.button === 2 && map) {
-
-        const polygonMarkers = markersRef.current.filter((m) => m.type == EMarkerType.polygon);
-        if(polygonMarkers.length >= 3 ){
-          setPolygons(prev => [...prev, {id: prev.length +1, markers: polygonMarkers}])
-          setMarker((prev)=>{
+      if (a_Event.originalEvent.button === 2 && map) {
+        const polygonMarkers = markersRef.current.filter(
+          (m) => m.type == EMarkerType.polygon,
+        );
+        if (polygonMarkers.length >= 3) {
+          setPolygons((prev) => [
+            ...prev,
+            { id: prev.length + 1, markers: polygonMarkers },
+          ]);
+          setMarker((prev) => {
             return {
               ...prev,
               zonal: false,
             };
-          })
+          });
         }
       }
       if (a_Event.originalEvent.button === 0 && map) {
@@ -277,29 +289,34 @@ const Map = () => {
     [map, addMarker, setPolygons, setMarker],
   );
 
-  const removePolygonLayer = useCallback((a_PolygonId: string) => {
-    if (map) {
-      const polygonLayer = map.getLayer(a_PolygonId);
-      if (polygonLayer) {
-        map.removeLayer(`${a_PolygonId}_label`);
-        map.removeLayer(a_PolygonId);
-        map.removeSource(a_PolygonId);
+  const removePolygonLayer = useCallback(
+    (a_PolygonId: string) => {
+      if (map) {
+        const polygonLayer = map.getLayer(a_PolygonId);
+        if (polygonLayer) {
+          map.removeLayer(`${a_PolygonId}_label`);
+          map.removeLayer(a_PolygonId);
+          map.removeSource(a_PolygonId);
+        }
       }
-    }
-  }, [map]);
+    },
+    [map],
+  );
 
   const removePolygonLayers = useCallback(() => {
     if (map) {
-      const polygonLayers = map.getLayersOrder().filter( l => l.includes("polygon") && !l.includes("label"));
+      const polygonLayers = map
+        .getLayersOrder()
+        .filter((l) => l.includes("polygon") && !l.includes("label"));
       if (polygonLayers) {
-        polygonLayers.forEach( l => {
+        polygonLayers.forEach((l) => {
           map.removeLayer(`${l}_label`);
           map.removeLayer(l);
           map.removeSource(l);
-        })
+        });
       }
     }
-  }, [map])
+  }, [map]);
 
   const drawPolygon = useCallback(
     (a_Polygon: IPolygon) => {
@@ -308,7 +325,7 @@ const Map = () => {
         return [lngLat.lng, lngLat.lat];
       });
 
-      const polygonId = "polygon_"+a_Polygon.id
+      const polygonId = "polygon_" + a_Polygon.id;
 
       const geojson: Feature<Polygon> = {
         type: "Feature",
@@ -325,8 +342,7 @@ const Map = () => {
         return;
       }
 
-      
-      removePolygonLayer(polygonId)
+      removePolygonLayer(polygonId);
 
       map!.addSource(polygonId, {
         type: "geojson",
@@ -362,18 +378,16 @@ const Map = () => {
         },
       });
 
-      setMarkers(prev => prev.filter( m => m.type !== EMarkerType.polygon ))
+      setMarkers((prev) => prev.filter((m) => m.type !== EMarkerType.polygon));
     },
     [map, removePolygonLayer, setMarkers],
   );
 
   const drawPolygons = () => {
-
-    polygonsRef.current.forEach( polygon =>{
-      drawPolygon(polygon)
-    })
-    
-  }
+    polygonsRef.current.forEach((polygon) => {
+      drawPolygon(polygon);
+    });
+  };
 
   const redrawCircle = useCallback(() => {
     const point = markers.find((m) => m.type === EMarkerType.point);
@@ -413,8 +427,8 @@ const Map = () => {
 
   const getCoordinatesFromMarkers = useCallback((): [number, number][] => {
     if (fetchFeaturesRef.current === EMarkerType.polygon) {
-      const lastPolygonLayer =  polygonsRef.current.at(-1)
-      if(!lastPolygonLayer) return []
+      const lastPolygonLayer = polygonsRef.current.at(-1);
+      if (!lastPolygonLayer) return [];
       let coordinates: [number, number][] = lastPolygonLayer.markers
         .filter((m) => m.type === EMarkerType.polygon)
         .map((m) => {
@@ -574,8 +588,11 @@ const Map = () => {
   const handleFlyToROI = useCallback(
     (a_To: EMarkerType, a_Zoom: number) => {
       if (a_To === EMarkerType.polygon) {
-        const lastPolygonLayer = map!.getLayersOrder().filter( l => l.includes("polygon") && !l.includes("label") ).at(-1)
-        if(!lastPolygonLayer) return
+        const lastPolygonLayer = map!
+          .getLayersOrder()
+          .filter((l) => l.includes("polygon") && !l.includes("label"))
+          .at(-1);
+        if (!lastPolygonLayer) return;
         const polygonLayer = map!.getLayer(lastPolygonLayer);
         const metadata = polygonLayer!.metadata as ILayerMetadata;
         const feature = metadata!.feature;
@@ -596,23 +613,23 @@ const Map = () => {
   );
 
   const getYAxisLabel = () => {
-    let smoothingStatus = smoothingWindow[0].value !== "1" ? `smoothed` : "raw"
-    let yAxisStatus = yAxis == EAggregationMethod.Mean ? "Mean" : "Median"
-    const full = yAxisStatus + " - " + smoothingStatus
-    return full
-  }
+    let smoothingStatus = smoothingWindow[0].value !== "1" ? `smoothed` : "raw";
+    let yAxisStatus = yAxis == EAggregationMethod.Mean ? "Mean" : "Median";
+    const full = yAxisStatus + " - " + smoothingStatus;
+    return full;
+  };
 
-  const getAllSamples = useCallback(()=>{
+  const getAllSamples = useCallback(() => {
     const allSamples = [...samples, ...notValidSamples].sort(
       (a, b) => a.id - b.id,
     );
-    return allSamples
-  }, [samples, notValidSamples])
+    return allSamples;
+  }, [samples, notValidSamples]);
 
   const withGapIndicator = (a_AllSamples: INDVISample[]) => {
     let lastValid: number | null = null;
 
-    return a_AllSamples.map(s => {
+    return a_AllSamples.map((s) => {
       if (s.meanNDVI != null) {
         lastValid = s.meanNDVI;
         return { ...s, meanNDVI_gap: null };
@@ -623,7 +640,7 @@ const Map = () => {
         meanNDVI_gap: lastValid,
       };
     });
-  }
+  };
 
   // Loading Map
   useEffect(() => {
@@ -659,7 +676,7 @@ const Map = () => {
       center: [7.4711617988066905, 51.36223529413988], // [lng, lat]
       zoom: 15,
       maxZoom: 18,
-      dragRotate: false
+      dragRotate: false,
     });
 
     mapInstance.addControl(new maplibregl.NavigationControl());
@@ -684,10 +701,10 @@ const Map = () => {
   // Follow Changing Polygons
   useEffect(() => {
     polygonsRef.current = polygons;
-    if(polygons.length === 0){
-      removePolygonLayers()
+    if (polygons.length === 0) {
+      removePolygonLayers();
     } else {
-      drawPolygons()
+      drawPolygons();
     }
   }, [polygons]);
 
@@ -724,7 +741,6 @@ const Map = () => {
       showMap();
       removeCircleLayer();
     }
-
   }, [markers]);
 
   // Read URLParams
@@ -735,13 +751,13 @@ const Map = () => {
 
     // point or zonal
     const pointROI = params.get(EURLParams.pointROI);
-    let zonalROIs: string[] = []
-    let i = 1
-    while( params.get(EURLParams.zonalROI+"-"+i) !== null ){
-      let zonalROI = params.get(EURLParams.zonalROI+"-"+i)
-      if(!zonalROI) continue
-      zonalROIs.push(zonalROI)
-      i++
+    let zonalROIs: string[] = [];
+    let i = 1;
+    while (params.get(EURLParams.zonalROI + "-" + i) !== null) {
+      let zonalROI = params.get(EURLParams.zonalROI + "-" + i);
+      if (!zonalROI) continue;
+      zonalROIs.push(zonalROI);
+      i++;
     }
 
     if (pointROI) {
@@ -766,12 +782,12 @@ const Map = () => {
     }
     if (zonalROIs.length > 0) {
       removePolygonLayers();
-      zonalROIs.forEach( (zonalROI, index) => {
+      zonalROIs.forEach((zonalROI, index) => {
         if (isROIValid(zonalROI, EMarkerType.polygon)) {
           removeMarker(EMarkerType.polygon);
           setTimeout(() => {
             const parsedROI: [number, number][] = JSON.parse(zonalROI);
-            let thisPolygonMarkers: IMarker[] = []
+            let thisPolygonMarkers: IMarker[] = [];
             parsedROI.forEach((coordinate) => {
               const [lng, lat] = coordinate;
               if (!map) {
@@ -786,15 +802,22 @@ const Map = () => {
                 type: EMarkerType.polygon,
                 marker: markerElement,
               };
-              
-              thisPolygonMarkers.push(newMarker)
+
+              thisPolygonMarkers.push(newMarker);
             });
-            setPolygons(prev => [...prev, {id: prev.length +1, markers: thisPolygonMarkers}])
+            setPolygons((prev) => [
+              ...prev,
+              { id: prev.length + 1, markers: thisPolygonMarkers },
+            ]);
           }, 100);
         } else {
-          console.warn("Failed to use URLParam: zonalROI-"+(index+1)+" does not match");
-        }    
-      })
+          console.warn(
+            "Failed to use URLParam: zonalROI-" +
+              (index + 1) +
+              " does not match",
+          );
+        }
+      });
     }
 
     // start and end date
@@ -913,7 +936,6 @@ const Map = () => {
         console.warn("Failed to use URLParam: filter does not match");
       }
     }
-
   }, [map]);
 
   // Write URLParams
@@ -925,14 +947,16 @@ const Map = () => {
     const params = new URLSearchParams();
 
     if (polygons.length > 0) {
-      polygons.forEach( polygon => {
+      polygons.forEach((polygon) => {
         const polygonCoords = polygon.markers.map((m) => {
           const lngLat = m.marker.getLngLat();
           return [lngLat.lng, lngLat.lat];
         });
-        params.set(EURLParams.zonalROI+"-"+polygon.id, JSON.stringify(polygonCoords));
-      })
-      
+        params.set(
+          EURLParams.zonalROI + "-" + polygon.id,
+          JSON.stringify(polygonCoords),
+        );
+      });
     }
     if (pointMarkers.length > 0) {
       const pointCoords = pointMarkers.map((m) => {
@@ -957,7 +981,7 @@ const Map = () => {
     params.set(EURLParams.limit, limit);
     params.set(EURLParams.coverage, coverageThreshold);
     params.set(EURLParams.filter, sampleFilter);
-    
+
     window.history.replaceState(null, "", `?${params.toString()}`);
   }, [
     map,
@@ -1139,72 +1163,78 @@ const Map = () => {
                 dataKey={"id"}
                 stroke="white"
                 tickFormatter={(id) =>
-                  withGapIndicator(getAllSamples()).find((d) => d.id === id)!.datetime.substring(0, 10)
+                  withGapIndicator(getAllSamples())
+                    .find((d) => d.id === id)!
+                    .datetime.substring(0, 10)
                 }
               />
               {/* Y automatically scale to fit the data */}
               <YAxis stroke="white" domain={[-1, 1]}>
                 <Label
                   style={{
-                      textAnchor: "middle",
-                      fontSize: "1.1rem",
-                      fill: "white",
+                    textAnchor: "middle",
+                    fontSize: "1.1rem",
+                    fill: "white",
                   }}
-                  angle={270} 
-                  value={getYAxisLabel()} />
+                  angle={270}
+                  value={getYAxisLabel()}
+                />
               </YAxis>
               {/* popup tooltip by hovering */}
               <Tooltip content={CustomTooltip} />
-                <Line 
-                  type="linear"
-                  dataKey={
-                    yAxis == EAggregationMethod.Mean 
+              <Line
+                type="linear"
+                dataKey={
+                  yAxis == EAggregationMethod.Mean
                     ? smoothingWindow[0].value !== "1"
-                      ? "meanNDVISmoothed" 
-                      : "meanNDVI" 
+                      ? "meanNDVISmoothed"
+                      : "meanNDVI"
                     : smoothingWindow[0].value !== "1"
-                      ? "medianNDVISmoothed" 
+                      ? "medianNDVISmoothed"
                       : "medianNDVI"
-                  } 
-                  stroke="#2ecc71" 
-                  dot={CustomizedDot}
-                />
+                }
+                stroke="#2ecc71"
+                dot={CustomizedDot}
+              />
 
-                <Line
-                  type="linear"
-                  dataKey="meanNDVI_gap"
-                  stroke="#2ecc71"
-                  strokeDasharray="6 4"
-                  opacity={0.5}
-                />
+              <Line
+                type="linear"
+                dataKey="meanNDVI_gap"
+                stroke="#2ecc71"
+                strokeDasharray="6 4"
+                opacity={0.5}
+              />
             </LineChart>
           </ResponsiveContainer>
           <ResponsiveContainer width="100%" height="10%">
-            <BarChart data={withGapIndicator(getAllSamples())} margin={{left: 60}} >
-              <XAxis 
-                dataKey={"id"} 
+            <BarChart
+              data={withGapIndicator(getAllSamples())}
+              margin={{ left: 60 }}
+            >
+              <XAxis
+                dataKey={"id"}
                 hide
                 tickFormatter={(id) =>
-                  withGapIndicator(getAllSamples()).find((d) => d.id === id)!.datetime.substring(0, 10)
+                  withGapIndicator(getAllSamples())
+                    .find((d) => d.id === id)!
+                    .datetime.substring(0, 10)
                 }
               />
               <YAxis domain={[0, 100]} hide />
-
 
               <ReferenceLine
                 y={Number(coverageThreshold)}
                 stroke="#ff6b6b"
                 strokeDasharray="4 4"
               >
-                  <Label
-                    style={{
-                        textAnchor: "middle",
-                        fontSize: "1.01rem",
-                        fill: "#dad458ff",
-                    }}
-                    value={Number(coverageThreshold)+"%"} 
-                  />
-                
+                <Label
+                  style={{
+                    textAnchor: "middle",
+                    fontSize: "1.01rem",
+                    fill: "#dad458ff",
+                  }}
+                  value={Number(coverageThreshold) + "%"}
+                />
               </ReferenceLine>
 
               <Bar dataKey={"valid_fraction"} barSize={20}>
@@ -1220,10 +1250,8 @@ const Map = () => {
                 ))}
               </Bar>
               <Tooltip content={CustomTooltip} />
-
             </BarChart>
           </ResponsiveContainer>
-
         </Chart>
       ) : (
         <></>

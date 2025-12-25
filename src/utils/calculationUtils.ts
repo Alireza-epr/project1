@@ -417,7 +417,7 @@ export const rejectOutliersIQR = (a_NDVI: Float32Array) => {
     (ndvi) => ndvi >= lowIQR && ndvi <= highIQR,
   );
 
-  const fractionValid = ((filteredNDVI.length / a_NDVI.length) * 100);
+  const fractionValid = (filteredNDVI.length / a_NDVI.length) * 100;
 
   return {
     ndviArray: new Float32Array(filteredNDVI),
@@ -443,7 +443,7 @@ export const rejectOutliersZScore = (a_NDVI: Float32Array, a_Threshold = 2) => {
     (ndvi) => Math.abs(ndvi - mean) <= a_Threshold * stdDev,
   );
 
-  const fractionValid = ((filteredNDVI.length / a_NDVI.length) * 100);
+  const fractionValid = (filteredNDVI.length / a_NDVI.length) * 100;
 
   return {
     ndviArray: new Float32Array(filteredNDVI),
@@ -477,7 +477,9 @@ export const getSmoothNDVISamples = (
     return {
       ...sample,
       meanNDVISmoothed: meanValues.length ? avg(meanValues) : sample.meanNDVI,
-      medianNDVISmoothed: medianValues.length ? avg(medianValues) : sample.medianNDVI,
+      medianNDVISmoothed: medianValues.length
+        ? avg(medianValues)
+        : sample.medianNDVI,
     };
   });
 };
@@ -486,11 +488,10 @@ export const detectChangePointsZScore = (
   a_ValidSamples: INDVISample[],
   a_Window = 5,
   a_ZThreshold = 2.5,
-  a_MinSeparation = 2
+  a_MinSeparation = 2,
 ): IChangePoint[] => {
-  
-  const ndvi = a_ValidSamples.map( s => s.meanNDVI as number )
-  const datetimes = a_ValidSamples.map( s => s.datetime )
+  const ndvi = a_ValidSamples.map((s) => s.meanNDVI as number);
+  const datetimes = a_ValidSamples.map((s) => s.datetime);
 
   const deltas: number[] = [];
 
@@ -503,8 +504,7 @@ export const detectChangePointsZScore = (
   for (let i = a_Window; i < deltas.length; i++) {
     const slice = deltas.slice(i - a_Window, i);
 
-    const mean =
-      slice.reduce((s, v) => s + v, 0) / slice.length;
+    const mean = slice.reduce((s, v) => s + v, 0) / slice.length;
 
     const variance =
       slice.reduce((s, v) => s + (v - mean) ** 2, 0) / slice.length;
@@ -527,5 +527,4 @@ export const detectChangePointsZScore = (
   }
 
   return changes;
-}
-
+};

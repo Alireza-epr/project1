@@ -1,64 +1,60 @@
-
-import { ReactNode, useCallback } from "react"
-import chartHeaderItemOptionsStyle from "./ChartHeaderItemOptions.module.scss"
-import Section from "./Section"
-import RangeInput from "./RangeInput"
-import { IChartHeaderItemOption } from "../types/generalTypes"
-import { useMapStore } from "../store/mapStore"
+import { ReactNode, useCallback } from "react";
+import chartHeaderItemOptionsStyle from "./ChartHeaderItemOptions.module.scss";
+import Section from "./Section";
+import RangeInput from "./RangeInput";
+import { IChartHeaderItemOption } from "../types/generalTypes";
+import { useMapStore } from "../store/mapStore";
 
 export interface ChartHeaderItemOptionsProps {
-    activeItem?: number,
-    isList?: boolean, 
-    options: IChartHeaderItemOption[],
-    onOption: (a_Valud: IChartHeaderItemOption) => void
+  activeItem?: number;
+  isList?: boolean;
+  options: IChartHeaderItemOption[];
+  onOption: (a_Valud: IChartHeaderItemOption) => void;
 }
 
 const ChartHeaderItemOptions = (props: ChartHeaderItemOptionsProps) => {
+  const comparisonItem = useMapStore((state) => state.comparisonItem);
+  const onSelectOption = useCallback((a_Option: IChartHeaderItemOption) => {
+    props.onOption(a_Option);
+  }, []);
 
-    const comparisonItem = useMapStore((state) => state.comparisonItem);
-    const onSelectOption = useCallback((a_Option: IChartHeaderItemOption)=>{
-        props.onOption(a_Option)
-    },[])
+  const onChangeOption = useCallback(
+    (a_Value: string, a_Option: IChartHeaderItemOption) => {
+      props.onOption({
+        ...a_Option,
+        value: a_Value,
+      });
+    },
+    [],
+  );
 
-    const onChangeOption = useCallback((a_Value: string, a_Option: IChartHeaderItemOption)=>{
-        props.onOption({
-            ...a_Option,
-            value: a_Value
-        })
-    },[])
+  return (
+    <div
+      className={` ${chartHeaderItemOptionsStyle.wrapper}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {props.isList
+        ? props.options.map((option, index) => (
+            <Section
+              title={option.title}
+              key={index}
+              onSection={() => onSelectOption(option)}
+              active={comparisonItem?.id == option.id}
+            ></Section>
+          ))
+        : props.options.map((option, index) => (
+            <Section title={option.title + " - " + option.value} key={index}>
+              <RangeInput
+                value={option.value}
+                onRangeChange={(v) => onChangeOption(v, option)}
+                max={option.max}
+                min={option.min}
+                step={option.step}
+              ></RangeInput>
+            </Section>
+          ))}
+    </div>
+  );
+};
 
-    return (
-        <div className={` ${chartHeaderItemOptionsStyle.wrapper}`} onClick={(e) => e.stopPropagation()}>
-            {
-            props.isList 
-            ?
-              props.options.map((option, index )=>
-                <Section
-                    title={option.title}
-                    key={index}
-                    onSection={()=>onSelectOption(option)}
-                    active={comparisonItem?.id == option.id }
-                >
-                </Section>
-              )  
-            : props.options.map((option, index )=>
-                <Section
-                    title={option.title+ " - " + option.value}
-                    key={index}
-                >
-                    <RangeInput
-                        value={option.value}
-                        onRangeChange={(v)=>onChangeOption(v, option)}
-                        max={option.max}
-                        min={option.min}
-                        step={option.step}
-                    >
-                    </RangeInput>
-                </Section>
-            )
-            }
-        </div>
-    )
-}
-
-export default ChartHeaderItemOptions
+export default ChartHeaderItemOptions;

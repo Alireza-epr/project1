@@ -106,14 +106,14 @@ const Sidebar = () => {
   };
 
   const handleClearZonal = (a_Polygons: IPolygon[]) => {
-    const lastPolygonLayer =  a_Polygons.at(-1)
-    if(!map || !lastPolygonLayer) return
+    const lastPolygonLayer = a_Polygons.at(-1);
+    if (!map || !lastPolygonLayer) return;
 
-    lastPolygonLayer.markers.forEach(m => {
+    lastPolygonLayer.markers.forEach((m) => {
       m.marker.remove();
-    })
-    
-    const polygonId = "polygon_"+lastPolygonLayer.id
+    });
+
+    const polygonId = "polygon_" + lastPolygonLayer.id;
 
     const polygonLayer = map.getLayer(polygonId);
     if (polygonLayer) {
@@ -122,7 +122,7 @@ const Sidebar = () => {
       map.removeSource(polygonId);
     }
 
-    setPolygons(prev=>prev.filter( p => p.id !== lastPolygonLayer.id ))
+    setPolygons((prev) => prev.filter((p) => p.id !== lastPolygonLayer.id));
   };
 
   const handleSetPolygonFetchFeatures = () => {
@@ -173,8 +173,6 @@ const Sidebar = () => {
     setSampleFilter(a_Type);
   };
 
-
-
   const [isSidebarDisabled, setIsSidebarDisabled] = useState(false);
 
   useEffect(() => {
@@ -198,20 +196,22 @@ const Sidebar = () => {
               icon="polygon"
             />
             <CButton
-              title={polygons.length > 0 ? "Remove Zonal Nr."+polygons.at(-1)?.id : "Remove Zonal"}
-              onButtonClick={()=>handleClearZonal(polygons)}
-              disable={
-                polygons.length ==
-                  0 || isSidebarDisabled
+              title={
+                polygons.length > 0
+                  ? "Remove Zonal Nr." + polygons.at(-1)?.id
+                  : "Remove Zonal"
               }
+              onButtonClick={() => handleClearZonal(polygons)}
+              disable={polygons.length == 0 || isSidebarDisabled}
             />
             <CButton
-              title={polygons.length > 0 ? "Chart of Zonal Nr."+polygons.at(-1)?.id : "Chart of Zonal"}
-              onButtonClick={handleSetPolygonFetchFeatures}
-              disable={
-                polygons.length ==
-                  0 || isSidebarDisabled
+              title={
+                polygons.length > 0
+                  ? "Chart of Zonal Nr." + polygons.at(-1)?.id
+                  : "Chart of Zonal"
               }
+              onButtonClick={handleSetPolygonFetchFeatures}
+              disable={polygons.length == 0 || isSidebarDisabled}
             />
           </div>
 
@@ -345,7 +345,6 @@ const Sidebar = () => {
               />
             </div>
           </Section>
-          
         </Section>
 
         <Section title="ROI" disabled={isSidebarDisabled}>

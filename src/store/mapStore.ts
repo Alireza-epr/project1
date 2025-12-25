@@ -1,4 +1,11 @@
-import { EAggregationMethod, EPastTime, ESampleFilter, IChangePoint, IChartHeaderItemOption, IComparisonItem } from "../types/generalTypes";
+import {
+  EAggregationMethod,
+  EPastTime,
+  ESampleFilter,
+  IChangePoint,
+  IChartHeaderItemOption,
+  IComparisonItem,
+} from "../types/generalTypes";
 import { getLocaleISOString } from "../utils/dateUtils";
 import { Map, Marker, Subscription } from "maplibre-gl";
 import { create } from "zustand";
@@ -47,8 +54,8 @@ export interface INDVISample {
 export type TMarker = Record<EMarkerType, boolean>;
 
 export interface IPolygon {
-  id: number,
-  markers: IMarker[]
+  id: number;
+  markers: IMarker[];
 }
 
 export interface IMapStoreStates {
@@ -85,7 +92,7 @@ export interface IMapStoreStates {
   previousPage: StacLink | null;
   sampleFilter: ESampleFilter;
   yAxis: EAggregationMethod;
-  polygons: IPolygon[]
+  polygons: IPolygon[];
 }
 
 export interface IMapStoreActions {
@@ -109,7 +116,11 @@ export interface IMapStoreActions {
       | ((prev: EMarkerType | null) => EMarkerType | null),
   ) => void;
   setGlobalLoading: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
-  setSmoothingWindow: (a_Value: IChartHeaderItemOption[] | ((prev: IChartHeaderItemOption[]) => IChartHeaderItemOption[])) => void;
+  setSmoothingWindow: (
+    a_Value:
+      | IChartHeaderItemOption[]
+      | ((prev: IChartHeaderItemOption[]) => IChartHeaderItemOption[]),
+  ) => void;
   setSamples: (
     a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
   ) => void;
@@ -154,15 +165,19 @@ export interface IMapStoreActions {
   setSampleFilter: (
     a_Filter: ESampleFilter | ((prev: ESampleFilter) => ESampleFilter),
   ) => void;
-  setYAxis: (a_Value: EAggregationMethod | ((prev: EAggregationMethod) => EAggregationMethod)) => void;
+  setYAxis: (
+    a_Value:
+      | EAggregationMethod
+      | ((prev: EAggregationMethod) => EAggregationMethod),
+  ) => void;
   setChangeDetection: (
     a_Value:
-      | (IChartHeaderItemOption[])
+      | IChartHeaderItemOption[]
       | ((prev: IChartHeaderItemOption[]) => IChartHeaderItemOption[]),
   ) => void;
   setComparisonOptions: (
     a_Value:
-      | (IChartHeaderItemOption[])
+      | IChartHeaderItemOption[]
       | ((prev: IChartHeaderItemOption[]) => IChartHeaderItemOption[]),
   ) => void;
   setComparisonItem: (
@@ -171,14 +186,10 @@ export interface IMapStoreActions {
       | ((prev: IComparisonItem | null) => IComparisonItem | null),
   ) => void;
   setChangePoints: (
-    a_Value:
-      | (IChangePoint[])
-      | ((prev: IChangePoint[]) => IChangePoint[]),
+    a_Value: IChangePoint[] | ((prev: IChangePoint[]) => IChangePoint[]),
   ) => void;
   setPolygons: (
-    a_Value:
-      | (IPolygon[])
-      | ((prev: IPolygon[]) => IPolygon[]),
+    a_Value: IPolygon[] | ((prev: IPolygon[]) => IPolygon[]),
   ) => void;
 }
 
@@ -223,21 +234,23 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       samples: [] as INDVISample[],
       sampleFilter: ESampleFilter.none,
       notValidSamples: [] as INDVISample[],
-      smoothingWindow: [{
-        title: "Window (1=off)",
-        id: 1,
-        value: "1",
-        min: 1, 
-        max: 7,
-        step: 2,
-      }] as IChartHeaderItemOption[],
+      smoothingWindow: [
+        {
+          title: "Window (1=off)",
+          id: 1,
+          value: "1",
+          min: 1,
+          max: 7,
+          step: 2,
+        },
+      ] as IChartHeaderItemOption[],
       yAxis: EAggregationMethod.Mean,
       changeDetection: [
         {
           title: "Window (1=off)",
           id: 1,
           value: "1",
-          min: 1, 
+          min: 1,
           max: 7,
           step: 2,
         },
@@ -245,7 +258,7 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
           title: "Z-Threshold",
           id: 2,
           value: "2.5",
-          min: 1.5, 
+          min: 1.5,
           max: 4,
           step: 0.1,
         },
@@ -253,10 +266,10 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
           title: "Separation",
           id: 3,
           value: "3",
-          min: 1, 
+          min: 1,
           max: 10,
           step: 1,
-        }
+        },
       ] as IChartHeaderItemOption[],
       changePoints: [] as IChangePoint[],
       comparisonOptions: [] as IChartHeaderItemOption[],
@@ -415,7 +428,9 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       setSmoothingWindow: (a_Value) =>
         set((state) => ({
           smoothingWindow:
-            typeof a_Value === "function" ? a_Value(state.smoothingWindow) : a_Value,
+            typeof a_Value === "function"
+              ? a_Value(state.smoothingWindow)
+              : a_Value,
         })),
 
       setResponseFeatures: (a_Value) =>
@@ -462,32 +477,39 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
 
       setYAxis: (a_Value) =>
         set((state) => ({
-          yAxis:
-            typeof a_Value === "function" ? a_Value(state.yAxis) : a_Value,
+          yAxis: typeof a_Value === "function" ? a_Value(state.yAxis) : a_Value,
         })),
 
       setChangeDetection: (a_Value) =>
         set((state) => ({
           changeDetection:
-            typeof a_Value === "function" ? a_Value(state.changeDetection) : a_Value,
+            typeof a_Value === "function"
+              ? a_Value(state.changeDetection)
+              : a_Value,
         })),
 
       setChangePoints: (a_Value) =>
         set((state) => ({
           changePoints:
-            typeof a_Value === "function" ? a_Value(state.changePoints) : a_Value,
+            typeof a_Value === "function"
+              ? a_Value(state.changePoints)
+              : a_Value,
         })),
 
       setComparisonOptions: (a_Value) =>
         set((state) => ({
           comparisonOptions:
-            typeof a_Value === "function" ? a_Value(state.comparisonOptions) : a_Value,
+            typeof a_Value === "function"
+              ? a_Value(state.comparisonOptions)
+              : a_Value,
         })),
-      
+
       setComparisonItem: (a_Value) =>
         set((state) => ({
           comparisonItem:
-            typeof a_Value === "function" ? a_Value(state.comparisonItem) : a_Value,
+            typeof a_Value === "function"
+              ? a_Value(state.comparisonItem)
+              : a_Value,
         })),
 
       setPolygons: (a_Value) =>

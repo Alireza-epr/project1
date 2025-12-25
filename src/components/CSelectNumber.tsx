@@ -23,7 +23,12 @@ const CSelectNumber = (props: ICSelectNumberProps) => {
       className={` ${cselectNumberStyles.wrapper}`}
       style={{ backgroundColor: props.disabled ? "grey" : "" }}
     >
-      <div className={` ${cselectNumberStyles.label}`} style={{color: props.disabled ? "darkgrey" : "" }}>{props.name}</div>
+      <div
+        className={` ${cselectNumberStyles.label}`}
+        style={{ color: props.disabled ? "darkgrey" : "" }}
+      >
+        {props.name}
+      </div>
       <div
         className={` ${cselectNumberStyles.select}`}
         style={{
@@ -35,7 +40,7 @@ const CSelectNumber = (props: ICSelectNumberProps) => {
           <div
             key={index}
             className={` ${cselectNumberStyles.option}`}
-            onClick={()=>handleSelectChange(option)}
+            onClick={() => handleSelectChange(option)}
             style={{
               backgroundColor: props.disabled
                 ? "grey"

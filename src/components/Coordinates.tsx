@@ -30,18 +30,20 @@ const Coordinates = (props: ICoordinatesProps) => {
   const setPolygons = useMapStore((state) => state.setPolygons);
 
   const handleDrawROI = (a_Coordinates: ICoordinate[]) => {
-    if(!map) return
+    if (!map) return;
 
     const importedMarkers: IMarker[] = a_Coordinates.map((c) => {
       const markerWithThisCoordinate =
         markers.find((m) => m.marker.getLngLat().lng === c.lngLat[0]) &&
         markers.find((m) => m.marker.getLngLat().lat === c.lngLat[1]);
 
-      if(markerWithThisCoordinate){
-        return markerWithThisCoordinate
+      if (markerWithThisCoordinate) {
+        return markerWithThisCoordinate;
       }
 
-      const markerElement = new maplibregl.Marker().setLngLat(c.lngLat).addTo(map);
+      const markerElement = new maplibregl.Marker()
+        .setLngLat(c.lngLat)
+        .addTo(map);
 
       const markerWithMap = {
         type: EMarkerType.polygon,
@@ -51,7 +53,10 @@ const Coordinates = (props: ICoordinatesProps) => {
       return markerWithMap;
     });
 
-    setPolygons(prev => [...prev, {id: prev.length +1, markers: importedMarkers}])
+    setPolygons((prev) => [
+      ...prev,
+      { id: prev.length + 1, markers: importedMarkers },
+    ]);
   };
 
   const handleSelectFile = (a_JSON: Record<string, any>) => {

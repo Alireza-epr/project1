@@ -3,14 +3,14 @@ import customTooltipItemStyle from "./CustomTooltipItem.module.scss";
 export interface ICustomTooltipItemProps {
   label: string;
   value: string | number;
-  isAbnormal?: boolean
+  isAbnormal?: boolean;
 }
 const CustumTooltipItem = (props: ICustomTooltipItemProps) => {
   return (
-    <div 
+    <div
       className={` ${customTooltipItemStyle.wrapper}`}
       style={{
-        color: props.isAbnormal ? "orange" : ""
+        color: props.isAbnormal ? "orange" : "",
       }}
     >
       <div className={` ${customTooltipItemStyle.label}`}>{props.label}</div>

@@ -1,4 +1,4 @@
-import { EMarkerType} from "../store/mapStore";
+import { EMarkerType } from "../store/mapStore";
 import { IFeature } from "./geoJSON";
 
 export enum EPastTime {
@@ -66,8 +66,8 @@ export enum EURLParams {
 }
 
 export enum EAggregationMethod {
-  Mean= "mean",
-  Median= "median"
+  Mean = "mean",
+  Median = "median",
 }
 export interface IChangePoint {
   id: number;
@@ -77,21 +77,21 @@ export interface IChangePoint {
   reason: "z-score";
 }
 export interface IChartHeaderItemOption {
-  title: string,
-  id: number,
-  value: string,
-  min?: number, 
-  max?: number,
-  step?: number
+  title: string;
+  id: number;
+  value: string;
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 export enum EChartHeaderOptions {
-  smoothing= "smoothing",
-  detection= "detection",
-  comparison= "comparison"
+  smoothing = "smoothing",
+  detection = "detection",
+  comparison = "comparison",
 }
 
 export interface IComparisonItem {
-  type: EMarkerType,
-  id: number
+  type: EMarkerType;
+  id: number;
 }

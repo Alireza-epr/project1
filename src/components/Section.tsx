@@ -2,11 +2,11 @@ import sectionStyles from "./Section.module.scss";
 import React, { useEffect, useRef } from "react";
 
 export interface ISectionProps {
-  active?: boolean
+  active?: boolean;
   title: string;
   children?: React.ReactNode;
   disabled?: boolean;
-  onSection?: () => void
+  onSection?: () => void;
 }
 const Section = (props: ISectionProps) => {
   return (
