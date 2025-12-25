@@ -51,7 +51,10 @@ const Chart = (props: IChartProps) => {
     (state) => state.setComparisonOptions,
   );
 
+  const comparisonItem = useMapStore((state) => state.comparisonItem);
   const setComparisonItem = useMapStore((state) => state.setComparisonItem);
+  const comparisonItemRef = useRef(comparisonItem);
+  useEffect(()=>{comparisonItemRef.current = comparisonItem},[comparisonItem])
 
   const changePoints = useMapStore((state) => state.changePoints);
   const setChangePoints = useMapStore((state) => state.setChangePoints);
@@ -121,8 +124,8 @@ const Chart = (props: IChartProps) => {
     } else {
       setShowToggleChart(false);
     }
-    const chartHeaderOption: IChartHeaderItemOption[] = polygons
-      .slice(0, -1)
+    const polygonOptions = fetchFeatures !== EMarkerType.point ? polygons.slice(0, -1) : polygons
+    const chartHeaderOption: IChartHeaderItemOption[] = polygonOptions
       .map((polygon) => {
         return {
           id: polygon.id,
@@ -130,7 +133,7 @@ const Chart = (props: IChartProps) => {
           value: `Polygon ${polygon.id}`,
         };
       });
-    if (hasPoint) {
+    if (hasPoint && fetchFeatures !== EMarkerType.point) {
       chartHeaderOption.push({
         id: chartHeaderOption.length + 1,
         title: "Point",
@@ -264,11 +267,15 @@ const Chart = (props: IChartProps) => {
   };
 
   const handleChangeComparison = (a_Option: IChartHeaderItemOption) => {
-    setComparisonItem({
-      id: a_Option.id,
-      type:
-        a_Option.title === "Point" ? EMarkerType.point : EMarkerType.polygon,
-    });
+    if(comparisonItemRef.current && comparisonItemRef.current.id === a_Option.id){
+      setComparisonItem(null)
+    } else {
+      setComparisonItem({
+        id: a_Option.id,
+        type:
+          a_Option.title === "Point" ? EMarkerType.point : EMarkerType.polygon,
+      });
+    }
   };
 
   const handleExportCSV = useCallback(
@@ -316,8 +323,8 @@ const Chart = (props: IChartProps) => {
           alt="Comparison"
           onClick={handleToggleComparisonOptions}
           icon="comparison"
-          disabled={!enableHeaderOption && comparisonOptions.length > 0}
-          active={showComparisonOptions}
+          disabled={!enableHeaderOption || comparisonOptions.length === 0}
+          active={comparisonItem !== null}
         >
           {showComparisonOptions ? (
             <ChartHeaderItemOptions
@@ -390,7 +397,7 @@ const Chart = (props: IChartProps) => {
           alt="Toggle Chart"
           onClick={handleToggleChart}
           icon="toggle"
-          disabled={!enableHeaderOption && !showToggleChart}
+          disabled={!enableHeaderOption || !showToggleChart}
         />
         <ChartHeaderItem
           title="List"
