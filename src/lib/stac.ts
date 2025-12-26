@@ -1,4 +1,4 @@
-import { INDVISample, useMapStore } from "../store/mapStore";
+import { ERequestContext, INDVISample, useMapStore } from "../store/mapStore";
 import {
   ESTACURLS,
   ISTACFilterRequest,
@@ -22,12 +22,15 @@ export const useFilterSTAC = () => {
   const setResponseFeatures = useMapStore((state) => state.setResponseFeatures);
   const setErrorFeatures = useMapStore((state) => state.setErrorFeatures);
 
-  const getFeatures = async (a_STACRequest: ISTACFilterRequest) => {
+  const getFeatures = async (a_STACRequest: ISTACFilterRequest, a_RequestContext: ERequestContext) => {
     if (cache.getCache(a_STACRequest)) {
       const respJSON = cache.getCache(a_STACRequest);
       console.log("Cached Features hit");
       console.log(respJSON);
-      setResponseFeatures(respJSON);
+      setResponseFeatures(prev=>({
+        ...prev,
+        [a_RequestContext]: respJSON
+      }));
       return;
     }
 
@@ -59,11 +62,17 @@ export const useFilterSTAC = () => {
         console.log("Cached Features missed");
         console.log(respJSON);
         cache.setCache(a_STACRequest, respJSON);
-        setResponseFeatures(respJSON);
+        setResponseFeatures(prev=>({
+          ...prev,
+          [a_RequestContext]: respJSON
+        }));
         return;
       } catch (err: any) {
         if (i == retry - 1) {
-          setErrorFeatures(err); //give up
+          setErrorFeatures(prev=>({
+            ...prev,
+            [a_RequestContext]: err
+          })); //give up
           throw err;
         }
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -89,6 +98,7 @@ export const useNDVI = () => {
     a_Features: IStacItem[],
     a_Coordinates: [number, number][],
     a_NDVIPanel: INDVIPanel,
+    a_RequestContext: ERequestContext
   ) => {
     const bandKeys = [
       EStacAssetsKey.nir,
@@ -102,11 +112,23 @@ export const useNDVI = () => {
           raster: null,
         };
       });
-    let countId = 1;
+    let counter = {
+      main: 1,
+      comparison: 1
+    };
 
-    setDoneFeature(1);
-    setSamples([]);
-    setNotValidSamples([]);
+    setDoneFeature(prev=>({
+      ...prev,
+      [a_RequestContext]: 1
+    }));
+    setSamples(prev=>({
+      ...prev,
+      [a_RequestContext]: []
+    }));
+    setNotValidSamples(prev=>({
+      ...prev,
+      [a_RequestContext]: []
+    }));
     for (const feature of a_Features) {
       try {
         //console.log(new Date(Date.now()).toISOString()+" Start Calculating NDVI for STAC Item id "+ feature.id)
@@ -116,16 +138,25 @@ export const useNDVI = () => {
           const cachedNDVI = cache.getCache(cacheKey) as INDVISample;
           const updatedId: INDVISample = {
             ...cachedNDVI,
-            id: countId,
+            id: counter[a_RequestContext],
           };
           console.log(updatedId);
           if (cachedNDVI.meanNDVI) {
-            setSamples((prev) => [...prev, updatedId]);
+            setSamples(prev=>({
+              ...prev,
+              [a_RequestContext]: [...prev[a_RequestContext], updatedId]
+            }));
           } else {
-            setNotValidSamples((prev) => [...prev, updatedId]);
+            setNotValidSamples(prev=>({
+              ...prev,
+              [a_RequestContext]: [...prev[a_RequestContext], updatedId]
+            }));
           }
-          ++countId;
-          setDoneFeature((prev) => ++prev);
+          counter[a_RequestContext] = counter[a_RequestContext] + 1;
+          setDoneFeature(prev=>({
+            ...prev,
+            [a_RequestContext]: prev[a_RequestContext] + 1
+          }));
           continue;
         }
 
@@ -170,7 +201,7 @@ export const useNDVI = () => {
         )?.raster;
         if (nirRaster && redRaster && SCLRaster) {
           const ndviSample = getNDVISample(
-            countId,
+            counter[a_RequestContext],
             redRaster,
             nirRaster,
             SCLRaster,
@@ -182,13 +213,19 @@ export const useNDVI = () => {
           console.log("Cached NDVI missed");
           console.log(ndviSample);
           cache.setCache(cacheKey, ndviSample);
-          setSamples((prev) => [...prev, ndviSample]);
+          setSamples(prev=>({
+            ...prev,
+            [a_RequestContext]: [...prev[a_RequestContext], ndviSample]
+          }));
         } else {
           throw new Error("Scene rejected: rasters are undefined");
         }
 
-        ++countId;
-        setDoneFeature((prev) => ++prev);
+        counter[a_RequestContext] = counter[a_RequestContext] +1;
+        setDoneFeature(prev=>({
+          ...prev,
+          [a_RequestContext]: prev[a_RequestContext] + 1
+        }));
       } catch (error: any) {
         /* if(!error.cause){
           console.error("Unexpected error getNDVI: "+error)
@@ -197,7 +234,7 @@ export const useNDVI = () => {
 
         const ndviSampleNotValid: INDVISample = {
           featureId: feature.id,
-          id: countId,
+          id: counter[a_RequestContext],
           datetime: feature.properties.datetime,
           preview: feature.assets.rendered_preview.href,
           ndviArray: error.cause.ndviArray ?? null,
@@ -212,9 +249,15 @@ export const useNDVI = () => {
         };
         console.log("Cached NDVI missed");
         console.log(ndviSampleNotValid);
-        setNotValidSamples((prev) => [...prev, ndviSampleNotValid]);
-        ++countId;
-        setDoneFeature((prev) => ++prev);
+        setNotValidSamples(prev=>({
+            ...prev,
+            [a_RequestContext]: [...prev[a_RequestContext], ndviSampleNotValid]
+          }));
+        counter[a_RequestContext] = counter[a_RequestContext] +1;
+        setDoneFeature(prev=>({
+          ...prev,
+          [a_RequestContext]: prev[a_RequestContext] + 1
+        }));
         continue;
       }
     }

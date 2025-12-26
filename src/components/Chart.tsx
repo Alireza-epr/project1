@@ -1,5 +1,6 @@
 import {
   EMarkerType,
+  ERequestContext,
   INDVISample,
   INDVISmoothed,
   useMapStore,
@@ -88,12 +89,12 @@ const Chart = (props: IChartProps) => {
   //const [smoothed, setSmoothed] = useState(false);
 
   useEffect(() => {
-    if (samples.length !== 0) {
+    if (samples[ERequestContext.main].length !== 0) {
       let max = -Infinity;
       let min = Infinity;
       let sum = 0;
       let count = 0;
-      for (const s of samples) {
+      for (const s of samples[ERequestContext.main]) {
         if (s.meanNDVI) {
           if (s.meanNDVI > max) {
             max = s.meanNDVI;
@@ -124,7 +125,7 @@ const Chart = (props: IChartProps) => {
     } else {
       setShowToggleChart(false);
     }
-    const polygonOptions = fetchFeatures !== EMarkerType.point ? polygons.slice(0, -1) : polygons
+    const polygonOptions = fetchFeatures[ERequestContext.main] !== EMarkerType.point ? polygons.slice(0, -1) : polygons
     const chartHeaderOption: IChartHeaderItemOption[] = polygonOptions
       .map((polygon) => {
         return {
@@ -133,7 +134,7 @@ const Chart = (props: IChartProps) => {
           value: `Polygon ${polygon.id}`,
         };
       });
-    if (hasPoint && fetchFeatures !== EMarkerType.point) {
+    if (hasPoint && fetchFeatures[ERequestContext.main] !== EMarkerType.point) {
       chartHeaderOption.push({
         id: chartHeaderOption.length + 1,
         title: "Point",
@@ -144,7 +145,7 @@ const Chart = (props: IChartProps) => {
   }, []);
 
   useEffect(() => {
-    if (!globalLoading && samples.length > 0) {
+    if (!globalLoading && samples[ERequestContext.main].length > 0) {
       setEnableHeaderOption(true);
     } else {
       setEnableHeaderOption(false);
@@ -152,14 +153,15 @@ const Chart = (props: IChartProps) => {
   }, [globalLoading]);
 
   useEffect(() => {
-    setSamples((prev) =>
-      getSmoothNDVISamples(prev, Number(smoothingWindow[0].value)),
-    );
+    setSamples(prev=>({
+      ...prev,
+      [ERequestContext.main]: getSmoothNDVISamples(prev[ERequestContext.main], Number(smoothingWindow[0].value))
+    }))
   }, [smoothingWindow]);
 
   useEffect(() => {
     const points = detectChangePointsZScore(
-      samples,
+      samples[ERequestContext.main],
       +changeDetection.find((o) => o.id == 1)!.value,
       +changeDetection.find((o) => o.id == 2)!.value,
       +changeDetection.find((o) => o.id == 3)!.value,
@@ -168,7 +170,7 @@ const Chart = (props: IChartProps) => {
   }, [changeDetection]);
 
   const getValidity = () => {
-    return props.items ? `${samples.length}/${props.items}` : "-";
+    return props.items ? `${samples[ERequestContext.main].length}/${props.items}` : "-";
   };
 
   const handleListItems = () => {
@@ -178,10 +180,13 @@ const Chart = (props: IChartProps) => {
 
   const handleToggleChart = () => {
     const nextFetchFeatures =
-      fetchFeatures === EMarkerType.polygon
+      fetchFeatures[ERequestContext.main] === EMarkerType.polygon
         ? EMarkerType.point
         : EMarkerType.polygon;
-    setFetchFeatures(nextFetchFeatures);
+    setFetchFeatures(prev=>({
+      ...prev,
+      [ERequestContext.main]: nextFetchFeatures
+    }));
   };
 
   const getLatency = () =>
@@ -316,7 +321,7 @@ const Chart = (props: IChartProps) => {
     <div className={` ${chartStyles.wrapper}`}>
       <div className={` ${chartStyles.buttonsWrapper}`}>
         <div className={` ${chartStyles.title}`}>
-          {`Chart of ${fetchFeatures == EMarkerType.point ? toFirstLetterUppercase(fetchFeatures) : "Zonal Nr." + polygons.at(-1)?.id}`}
+          {`Chart of ${fetchFeatures[ERequestContext.main] == EMarkerType.point ? toFirstLetterUppercase(fetchFeatures[ERequestContext.main]) : "Zonal Nr." + polygons.at(-1)?.id}`}
         </div>
         <ChartHeaderItem
           title={"Comparison "}
@@ -339,7 +344,7 @@ const Chart = (props: IChartProps) => {
         <ChartHeaderItem
           title="Series Summary"
           alt="Series Summary"
-          onClick={() => handleToggleSummary([...samples, ...notValidSamples])}
+          onClick={() => handleToggleSummary([...samples[ERequestContext.main], ...notValidSamples[ERequestContext.main]])}
           icon="info"
           disabled={!enableHeaderOption}
           active={showSummary}
@@ -347,7 +352,7 @@ const Chart = (props: IChartProps) => {
         <ChartHeaderItem
           title="Export CSV"
           alt="Export CSV"
-          onClick={() => handleExportCSV([...samples, ...notValidSamples])}
+          onClick={() => handleExportCSV([...samples[ERequestContext.main], ...notValidSamples[ERequestContext.main]])}
           icon="export-csv"
           disabled={!enableHeaderOption}
         />
@@ -417,7 +422,7 @@ const Chart = (props: IChartProps) => {
       </div>
       {showList ? (
         <div className={` ${chartStyles.listWrapper}`}>
-          <ChartListRows items={[...samples, ...notValidSamples]} />
+          <ChartListRows items={[...samples[ERequestContext.main], ...notValidSamples[ERequestContext.main]]} />
         </div>
       ) : (
         <></>

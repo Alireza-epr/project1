@@ -51,6 +51,18 @@ export interface INDVISample {
   filter_fraction: number; // 0 - 100
 }
 
+export enum ERequestContext {
+  main= "main",
+  comparison= "comparison"
+}
+
+export type TSample = Record< ERequestContext, INDVISample[] >
+export type TFetchFeature = Record< ERequestContext, EMarkerType | null >
+export type TResponseFeature = Record< ERequestContext, IStacSearchResponse | null>
+export type TErrorFeature = Record< ERequestContext, Error | null >
+export type TErrorNDVI = Record< ERequestContext, Error | null >
+export type TDoneFeature = Record< ERequestContext, number >
+
 export type TMarker = Record<EMarkerType, boolean>;
 
 export interface IPolygon {
@@ -71,20 +83,20 @@ export interface IMapStoreStates {
   radius: string;
   showChart: boolean;
   showError: boolean;
-  fetchFeatures: EMarkerType | null;
+  fetchFeatures: TFetchFeature;
   globalLoading: boolean;
   smoothingWindow: IChartHeaderItemOption[];
   changeDetection: IChartHeaderItemOption[];
   comparisonOptions: IChartHeaderItemOption[];
   comparisonItem: IComparisonItem | null;
   changePoints: IChangePoint[];
-  samples: INDVISample[];
-  notValidSamples: INDVISample[];
-  responseFeatures: IStacSearchResponse | null;
-  errorFeatures: Error | null;
-  errorNDVI: Error | null;
+  samples: TSample;
+  notValidSamples: TSample;
+  responseFeatures: TResponseFeature;
+  errorFeatures: TErrorFeature;
+  errorNDVI: TErrorNDVI;
   tokenCollection: ITokenCollection | null;
-  doneFeature: number;
+  doneFeature: TDoneFeature;
   temporalOp: TTemporalComparison;
   spatialOp: TSpatialComparison;
   showROI: boolean;
@@ -112,8 +124,8 @@ export interface IMapStoreActions {
   setShowError: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setFetchFeatures: (
     a_Value:
-      | (EMarkerType | null)
-      | ((prev: EMarkerType | null) => EMarkerType | null),
+      | (TFetchFeature)
+      | ((prev: TFetchFeature) => TFetchFeature),
   ) => void;
   setGlobalLoading: (a_Value: boolean | ((prev: boolean) => boolean)) => void;
   setSmoothingWindow: (
@@ -122,28 +134,28 @@ export interface IMapStoreActions {
       | ((prev: IChartHeaderItemOption[]) => IChartHeaderItemOption[]),
   ) => void;
   setSamples: (
-    a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
+    a_Value: TSample | ((prev: TSample) => TSample),
   ) => void;
   setNotValidSamples: (
-    a_Value: INDVISample[] | ((prev: INDVISample[]) => INDVISample[]),
+    a_Value: TSample | ((prev: TSample) => TSample),
   ) => void;
   setResponseFeatures: (
     a_Value:
-      | (IStacSearchResponse | null)
-      | ((prev: IStacSearchResponse | null) => IStacSearchResponse | null),
+      | (TResponseFeature)
+      | ((prev: TResponseFeature) => TResponseFeature),
   ) => void;
   setErrorFeatures: (
-    a_Value: (Error | null) | ((prev: Error | null) => Error | null),
+    a_Value: (TErrorFeature) | ((prev: TErrorFeature) => TErrorFeature),
   ) => void;
   setErrorNDVI: (
-    a_Value: (Error | null) | ((prev: Error | null) => Error | null),
+    a_Value: (TErrorNDVI) | ((prev: TErrorNDVI) => TErrorNDVI),
   ) => void;
   setTokenCollection: (
     a_Value:
       | (ITokenCollection | null)
       | ((prev: ITokenCollection | null) => ITokenCollection | null),
   ) => void;
-  setDoneFeature: (a_Value: number | ((prev: number) => number)) => void;
+  setDoneFeature: (a_Value: TDoneFeature | ((prev: TDoneFeature) => TDoneFeature)) => void;
   setLimit: (a_Value: string | ((prev: string) => string)) => void;
   setRadius: (a_Value: string | ((prev: string) => string)) => void;
   setTemporalOp: (
@@ -219,21 +231,42 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
       temporalOp: temporalItems[0].value,
       //features
       tokenCollection: null as ITokenCollection | null,
-      fetchFeatures: null as EMarkerType | null,
-      responseFeatures: null as IStacSearchResponse | null,
-      errorFeatures: null as Error | null,
-      errorNDVI: null as Error | null,
+      fetchFeatures: {
+        "main": null as EMarkerType | null,
+        "comparison": null as EMarkerType | null,
+      },
+      responseFeatures:{
+        "main": null as IStacSearchResponse | null,
+        "comparison": null as IStacSearchResponse | null,
+      }, 
+      errorFeatures: {
+        "main": null as Error | null,
+        "comparison": null as Error | null,
+      },
+      errorNDVI:{
+        "main": null as Error | null,
+        "comparison": null as Error | null,
+      },
       showChart: false,
       showError: false,
       globalLoading: false,
-      doneFeature: 1,
+      doneFeature: {
+        "main": 1,
+        "comparison": 1,
+      },
       showROI: false,
       nextPage: null as StacLink | null,
       previousPage: null as StacLink | null,
       //NDVI
-      samples: [] as INDVISample[],
+      samples: {
+        "main": [] as INDVISample[],
+        "comparison": [] as INDVISample[],
+      },
       sampleFilter: ESampleFilter.none,
-      notValidSamples: [] as INDVISample[],
+      notValidSamples: {
+        "main": [] as INDVISample[],
+        "comparison": [] as INDVISample[],
+      },
       smoothingWindow: [
         {
           title: "Window (1=off)",
@@ -325,7 +358,7 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
             typeof a_Start === "function" ? a_Start(state.startDate) : a_Start,
         })),
 
-      setDoneFeature: (a_Value: number | ((a_Prev: number) => number)) =>
+      setDoneFeature: (a_Value) =>
         set((state) => ({
           doneFeature:
             typeof a_Value === "function"
@@ -399,9 +432,7 @@ export const useMapStore = create<IMapStoreStates & IMapStoreActions>(
               : a_Value,
         })),
 
-      setSamples: (
-        a_Samples: INDVISample[] | ((a_Prev: INDVISample[]) => INDVISample[]),
-      ) =>
+      setSamples: (a_Samples) =>
         set((state) => ({
           samples:
             typeof a_Samples === "function"

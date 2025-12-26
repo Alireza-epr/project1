@@ -1,7 +1,7 @@
 import sidebarStyles from "./Sidebar.module.scss";
 import CButton from "../components/CButton";
 import Section from "./Section";
-import { EMarkerType, IPolygon, TMarker, useMapStore } from "../store/mapStore";
+import { EMarkerType, ERequestContext, IPolygon, TMarker, useMapStore } from "../store/mapStore";
 import { useEffect, useState } from "react";
 import DateInput from "./DateInput";
 import RangeInput from "./RangeInput";
@@ -126,11 +126,17 @@ const Sidebar = () => {
   };
 
   const handleSetPolygonFetchFeatures = () => {
-    setFetchFeatures(EMarkerType.polygon);
+    setFetchFeatures(prev=>({
+      ...prev,
+      [ERequestContext.main]: EMarkerType.polygon
+    }))
   };
 
   const handleSetPointFetchFeatures = () => {
-    setFetchFeatures(EMarkerType.point);
+    setFetchFeatures(prev=>({
+      ...prev,
+      [ERequestContext.main]: EMarkerType.point
+    }))
   };
 
   const handleStartDateChange = (a_Date: string) => {
@@ -176,7 +182,8 @@ const Sidebar = () => {
   const [isSidebarDisabled, setIsSidebarDisabled] = useState(false);
 
   useEffect(() => {
-    if (fetchFeatures !== null) {
+    const fetchAnyFeature = fetchFeatures.comparison !== null || fetchFeatures.main !== null
+    if (fetchAnyFeature) {
       setIsSidebarDisabled(true);
     } else {
       setIsSidebarDisabled(false);

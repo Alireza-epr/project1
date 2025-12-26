@@ -5,6 +5,7 @@ import { Map as MapLibre } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   EMarkerType,
+  ERequestContext,
   IMarker,
   INDVISample,
   IPolygon,
@@ -149,23 +150,24 @@ const Map = () => {
   }, [getFeatures]);
 
   const debouncedGetFeatures = useCallback(
-    debounce((postBody) => getFeaturesRef.current(postBody), 300),
+    debounce((postBody, a_RequestContext) => getFeaturesRef.current(postBody, a_RequestContext), 300),
     [],
   );
 
   const throttledGetFeatures = useCallback(
-    throttle((postBody) => getFeaturesRef.current(postBody), 10000),
+    throttle((postBody, a_RequestContext) => getFeaturesRef.current(postBody, a_RequestContext), 10000),
     [],
   );
 
   const debouncedThrottledGetFeatures = throttle(
-    debounce((postBody) => getFeaturesRef.current(postBody), 300),
+    debounce((postBody, a_RequestContext) => getFeaturesRef.current(postBody, a_RequestContext), 300),
     1000,
   );
 
   const polygonsRef = useRef(polygons);
   const markersRef = useRef(markers);
   const radiusRef = useRef(radius);
+  const comparisonItemRef = useRef(comparisonItem);
   const fetchFeaturesRef = useRef(fetchFeatures);
 
   const addMarker = useCallback(
@@ -428,9 +430,11 @@ const Map = () => {
     });
   }, [map, setMarkers]);
 
-  const getCoordinatesFromMarkers = useCallback((): [number, number][] => {
-    if (fetchFeaturesRef.current === EMarkerType.polygon) {
-      const lastPolygonLayer = polygonsRef.current.at(-1);
+  const getCoordinatesFromMarkers = useCallback((a_RequestContext: ERequestContext): [number, number][] => {
+    let thisFetchFeatures = fetchFeaturesRef.current[a_RequestContext]
+    if (thisFetchFeatures === EMarkerType.polygon) {
+      let index = a_RequestContext == ERequestContext.main ? -1 : (comparisonItemRef.current?.id ?? 1) -1
+      const lastPolygonLayer = polygonsRef.current.at(index);
       if (!lastPolygonLayer) return [];
       let coordinates: [number, number][] = lastPolygonLayer.markers
         .filter((m) => m.type === EMarkerType.polygon)
@@ -484,7 +488,7 @@ const Map = () => {
     }
   },[map])
 
-  const getPostBody = useCallback((a_ComparisonItem?: IComparisonItem) => {
+  const getPostBody = useCallback((a_RequestContext: ERequestContext) => {
     const cloudCoverFilter: TCloudCoverFilter = {
       op: "<=",
       args: [{ property: "eo:cloud_cover" }, Number(cloudCover)],
@@ -501,7 +505,7 @@ const Map = () => {
         { property: "geometry" },
         {
           type: "Polygon",
-          coordinates: [!a_ComparisonItem ? getCoordinatesFromMarkers(): getCoordinatesFromComparisonItem(a_ComparisonItem)],
+          coordinates: [getCoordinatesFromMarkers(a_RequestContext)],
         },
       ],
     };
@@ -546,7 +550,10 @@ const Map = () => {
   const showMap = useCallback(() => {
     setShowError(false);
     setShowChart(false);
-    setFetchFeatures(null);
+    /* setFetchFeatures({
+      "main": null,
+      "comparison": null
+    }); */
     setGlobalLoading(false);
   }, [setShowError, setShowChart, setFetchFeatures, setGlobalLoading]);
 
@@ -568,13 +575,25 @@ const Map = () => {
     setGlobalLoading(false);
   }, [setShowError, setShowChart, setGlobalLoading]);
 
-  const resetStates = useCallback(() => {
+  const resetStates = useCallback((a_RequestContext: ERequestContext) => {
     start = Date.now();
     setLatency(0);
-    setSamples([]);
-    setNotValidSamples([]);
-    setResponseFeatures(null);
-    setErrorFeatures(null);
+    setSamples(prev=>({
+      ...prev,
+      [a_RequestContext]: []
+    }));
+    setNotValidSamples(prev=>({
+      ...prev,
+      [a_RequestContext]: []
+    }));
+    setResponseFeatures(prev=>({
+      ...prev,
+      [a_RequestContext]: null
+    }));
+    setErrorFeatures(prev=>({
+      ...prev,
+      [a_RequestContext]: null
+    }));
   }, [
     setLatency,
     setSamples,
@@ -585,7 +604,10 @@ const Map = () => {
 
   const handleCloseChart = useCallback(() => {
     setComparisonItem(null)
-    setFetchFeatures(null);
+    setFetchFeatures({
+      "main": null,
+      "comparison": null
+    });
     showMap();
   }, [setFetchFeatures, showMap]);
 
@@ -598,8 +620,9 @@ const Map = () => {
 
       console.log("Next Request", postBody);
       showLoadingModal();
-      resetStates();
-      debouncedGetFeatures(postBody);
+      setComparisonItem(null)
+      resetStates(ERequestContext.main);
+      debouncedGetFeatures(postBody, ERequestContext.main);
     }
   }, [nextPage, showLoadingModal, resetStates, debouncedGetFeatures]);
 
@@ -612,8 +635,9 @@ const Map = () => {
 
       console.log("Previous Request", postBody);
       showLoadingModal();
-      resetStates();
-      debouncedGetFeatures(postBody);
+      setComparisonItem(null)
+      resetStates(ERequestContext.main);
+      debouncedGetFeatures(postBody, ERequestContext.main);
     }
   }, [previousPage, showLoadingModal, resetStates, debouncedGetFeatures]);
 
@@ -651,8 +675,8 @@ const Map = () => {
     return full;
   };
 
-  const getAllSamples = useCallback(() => {
-    const allSamples = [...samples, ...notValidSamples].sort(
+  const getAllSamples = useCallback((a_RequestContext: ERequestContext) => {
+    const allSamples = [...samples[a_RequestContext], ...notValidSamples[a_RequestContext]].sort(
       (a, b) => a.id - b.id,
     );
     return allSamples;
@@ -1035,23 +1059,40 @@ const Map = () => {
 
   // 1. Get Features
   useEffect(() => {
-    if (fetchFeatures !== null) {
-      fetchFeaturesRef.current = fetchFeatures;
-      const postBody = getPostBody();
-      showLoadingModal();
-      resetStates();
-      start = Date.now();
-      console.log("Request Body");
-      console.log(postBody);
-      debouncedGetFeatures(postBody);
-    } else {
-      resetStates();
-      showMap();
+    fetchFeaturesRef.current = fetchFeatures;
+    const fetchAnyFeature = fetchFeatures.comparison !== null || fetchFeatures.main !== null
+    if(!fetchAnyFeature) return
+    for(let fetchFeature in fetchFeatures){
+      if(fetchFeatures[fetchFeature] !== null){
+        const postBody = getPostBody(fetchFeature as ERequestContext);
+        showLoadingModal();
+        resetStates(fetchFeature as ERequestContext);
+        start = Date.now();
+        console.log("Request Body");
+        console.log(postBody);
+        debouncedGetFeatures(postBody, fetchFeature as ERequestContext);
+      } else {
+        if(fetchFeature === ERequestContext.main){
+          resetStates(ERequestContext.main);
+          showMap();
+        }
+      }
     }
   }, [fetchFeatures]);
 
+  // 1.1 Comparison Mode
+  useEffect(()=>{
+    comparisonItemRef.current = comparisonItem
+    if(comparisonItem){
+      setFetchFeatures(prev=>({
+        ...prev,
+        [ERequestContext.comparison]: comparisonItem.type 
+      }))
+    }
+  },[comparisonItem])
+
   useEffect(() => {
-    if (errorFeatures) {
+    if (errorFeatures[ERequestContext.main]) {
       console.error("Failed to get features");
       console.error(errorFeatures);
       //resetStates();
@@ -1063,24 +1104,32 @@ const Map = () => {
 
   // 2. Get Token
   useEffect(() => {
-    if (responseFeatures) {
-      const nextLink = responseFeatures.links?.find(
-        (l) => l.rel == EStacLinkRel.next,
-      );
-      const previousLink = responseFeatures.links?.find(
-        (l) => l.rel == EStacLinkRel.previous,
-      );
-      if (nextLink) {
-        setNextPage(nextLink);
-      } else {
-        setNextPage(null);
+    const isAnyResponseReceived = responseFeatures.comparison !== null || responseFeatures.main !== null
+    if (isAnyResponseReceived) {
+      if(responseFeatures[ERequestContext.main]){
+        const nextLink = responseFeatures[ERequestContext.main].links?.find(
+          (l) => l.rel == EStacLinkRel.next,
+        );
+        const previousLink = responseFeatures[ERequestContext.main].links?.find(
+          (l) => l.rel == EStacLinkRel.previous,
+        );
+        if (nextLink) {
+          setNextPage(nextLink);
+        } else {
+          setNextPage(null);
+        }
+        if (previousLink) {
+          setPreviousPage(previousLink);
+        } else {
+          setPreviousPage(null);
+        }
       }
-      if (previousLink) {
-        setPreviousPage(previousLink);
-      } else {
-        setPreviousPage(null);
-      }
-      if (responseFeatures.features.length !== 0) {
+
+      const hasResponseFeatureLength = 
+        responseFeatures.comparison?.features.length !== 0 
+        ||
+        responseFeatures.main?.features.length !== 0 
+      if (hasResponseFeatureLength) {
         getTokenCollection();
       } else {
         showErrorModal();
@@ -1091,31 +1140,49 @@ const Map = () => {
   // 3. Calculate NDVI
   useEffect(() => {
     if (tokenCollection) {
-      if (responseFeatures) {
+      const isAnyResponseReceived = responseFeatures.comparison !== null || responseFeatures.main !== null
+      if (isAnyResponseReceived) {
+        const NDVIItem: INDVIPanel = {
+          filter: sampleFilter,
+          coverageThreshold: Number(coverageThreshold),
+        };
         //console.log(new Date(Date.now()).toISOString()+" STAC item numbers: " + responseFeatures.features.length)
-        if (responseFeatures.features.length > 0) {
-          const NDVIItem: INDVIPanel = {
-            filter: sampleFilter,
-            coverageThreshold: Number(coverageThreshold),
-          };
-          getNDVI(
-            responseFeatures.features,
-            getCoordinatesFromMarkers(),
-            NDVIItem,
-          );
+        if(responseFeatures[ERequestContext.main]){
+          if (responseFeatures[ERequestContext.main].features.length > 0) {
+
+            getNDVI(
+              responseFeatures[ERequestContext.main].features,
+              getCoordinatesFromMarkers(ERequestContext.main),
+              NDVIItem,
+              ERequestContext.main
+            );
+          }
         }
+        if(responseFeatures[ERequestContext.comparison]){
+          if (responseFeatures[ERequestContext.comparison].features.length > 0) {
+
+            getNDVI(
+              responseFeatures[ERequestContext.comparison].features,
+              getCoordinatesFromMarkers(ERequestContext.comparison),
+              NDVIItem,
+              ERequestContext.comparison
+            );
+          }
+        }
+        
       }
     } else {
       console.log("tokenCollection error");
       console.log(responseFeatures);
-      if (responseFeatures && responseFeatures.features.length !== 0) {
+      
+      if (responseFeatures[ERequestContext.main] && responseFeatures[ERequestContext.main].features.length !== 0) {
         showErrorModal();
-      }
-      resetStates();
+        resetStates(ERequestContext.main);
+      } 
     }
   }, [tokenCollection]);
   useEffect(() => {
-    if (errorNDVI) {
+    if (errorNDVI[ERequestContext.main]) {
       console.error("Failed to calculate NDVI");
       console.error(errorNDVI);
       //resetStates();
@@ -1130,8 +1197,8 @@ const Map = () => {
     if (globalLoading) {
       showLoadingModal();
     } else {
-      if (responseFeatures == null) return; // avoding show Chart on mounting
-      if (samples.every((s) => !s.meanNDVI)) {
+      if (responseFeatures[ERequestContext.main] == null) return; // avoding show Chart on mounting
+      if (samples[ERequestContext.main].every((s) => !s.meanNDVI)) {
         showErrorModal();
         end = Date.now();
         setLatency(end - start);
@@ -1142,16 +1209,6 @@ const Map = () => {
       }
     }
   }, [globalLoading]);
-
-  // 5. Comparison Mode
-  useEffect(()=>{
-    if(comparisonItem){
-      const comparisonPostBody = getPostBody(comparisonItem)
-      console.log("Request Body (Comparison)")
-      console.log(comparisonPostBody)
-    }
-  },[comparisonItem])
-
 
   return (
     <div className={` ${mapStyle.wrapper}`}>
@@ -1194,18 +1251,18 @@ const Map = () => {
           onClose={handleCloseChart}
           onNext={handleNextPageChart}
           onPrevious={handlePreviousPageChart}
-          items={responseFeatures?.features.length ?? 0}
+          items={responseFeatures[ERequestContext.main]?.features.length ?? 0}
           latency={latency}
         >
           <ResponsiveContainer width="100%" height="90%">
             {/* resize automatically */}
             {/* array of objects */}
-            <LineChart data={withGapIndicator(getAllSamples())}>
+            <LineChart data={withGapIndicator(getAllSamples(ERequestContext.main))}>
               <XAxis
                 dataKey={"id"}
                 stroke="white"
                 tickFormatter={(id) =>
-                  withGapIndicator(getAllSamples())
+                  withGapIndicator(getAllSamples(ERequestContext.main))
                     .find((d) => d.id === id)!
                     .datetime.substring(0, 10)
                 }
@@ -1250,14 +1307,14 @@ const Map = () => {
           </ResponsiveContainer>
           <ResponsiveContainer width="100%" height="10%">
             <BarChart
-              data={withGapIndicator(getAllSamples())}
+              data={withGapIndicator(getAllSamples(ERequestContext.main))}
               margin={{ left: 60 }}
             >
               <XAxis
                 dataKey={"id"}
                 hide
                 tickFormatter={(id) =>
-                  withGapIndicator(getAllSamples())
+                  withGapIndicator(getAllSamples(ERequestContext.main))
                     .find((d) => d.id === id)!
                     .datetime.substring(0, 10)
                 }
@@ -1280,7 +1337,7 @@ const Map = () => {
               </ReferenceLine>
 
               <Bar dataKey={"valid_fraction"} barSize={20}>
-                {withGapIndicator(getAllSamples()).map((sample, index) => (
+                {withGapIndicator(getAllSamples(ERequestContext.main)).map((sample, index) => (
                   <Cell
                     key={sample.id}
                     fill={
@@ -1307,11 +1364,11 @@ const Map = () => {
         >
           <div className={` ${mapStyle.errorWrapper}`}>
             <div className={` ${mapStyle.error}`}>
-              {responseFeatures &&
-              responseFeatures.features &&
-              responseFeatures?.features.length == 0
+              {responseFeatures[ERequestContext.main] &&
+              responseFeatures[ERequestContext.main].features &&
+              responseFeatures[ERequestContext.main]?.features.length == 0
                 ? "No STAC Item found!"
-                : "Problem with getting NDVI samples! Check the list for more information."}
+                : "No Valid Scene found! Check the list for more information."}
             </div>
           </div>
         </Chart>
@@ -1326,9 +1383,15 @@ const Map = () => {
         >
           <Loading
             text={
-              responseFeatures?.features.length
-                ? `${doneFeature}/${responseFeatures?.features.length} `
-                : "N/A"
+              comparisonItem
+              ?
+                responseFeatures[ERequestContext.comparison]?.features.length
+                  ? `${doneFeature[ERequestContext.comparison]}/${responseFeatures[ERequestContext.comparison]?.features.length} `
+                  : "N/A"
+              :
+                responseFeatures[ERequestContext.main]?.features.length
+                  ? `${doneFeature[ERequestContext.main]}/${responseFeatures[ERequestContext.main]?.features.length} `
+                  : "N/A"
             }
             size={ELoadingSize.md}
             marginVertical={"1vh"}
